@@ -27,37 +27,29 @@ export default function Layout() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Hero Banner */}
       <div className="bg-gradient-to-r from-green-700 via-green-600 to-blue-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 py-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight whitespace-nowrap">⚽ Tanay Soccer League</h1>
-            <p className="text-green-100 text-base md:text-lg mt-3">FIFA World Cup Prediction Challenge 2026</p>
-          </div>
-          <div className="flex -space-x-4">
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/b/b4/Lionel-Messi-Argentina-2022-FIFA-World-Cup_%28cropped%29.jpg"
-              alt="Messi"
-              className="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover border-3 border-white shadow-lg"
-            />
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/8/8c/Cristiano_Ronaldo_2018.jpg"
-              alt="Ronaldo"
-              className="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover border-3 border-white shadow-lg"
-            />
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/2/2c/Maradona-Mundial_86_con_la_copa.JPG"
-              alt="Maradona"
-              className="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover border-3 border-white shadow-lg"
-            />
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/6/65/20180610_FIFA_Friendly_Match_Austria_vs._Brazil_Neymar_850_1705.jpg"
-              alt="Neymar"
-              className="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover border-3 border-white shadow-lg"
-            />
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/e/e1/Mbapp%C3%A9_2022.jpg"
-              alt="Mbappé"
-              className="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover border-3 border-white shadow-lg"
-            />
+        <div className="max-w-7xl mx-auto px-3 py-4 md:px-4 md:py-6">
+          <div className="flex items-center justify-between">
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold tracking-tight truncate">⚽ Tanay Soccer League</h1>
+              <p className="text-green-100 text-xs sm:text-sm md:text-lg mt-1 md:mt-3">FIFA World Cup Prediction Challenge 2026</p>
+            </div>
+            <div className="flex -space-x-2 md:-space-x-4 shrink-0 ml-3">
+              <img
+                src="https://upload.wikimedia.org/wikipedia/commons/b/b4/Lionel-Messi-Argentina-2022-FIFA-World-Cup_%28cropped%29.jpg"
+                alt="Messi"
+                className="w-10 h-10 sm:w-14 sm:h-14 md:w-20 md:h-20 rounded-full object-cover border-2 border-white shadow-lg"
+              />
+              <img
+                src="https://upload.wikimedia.org/wikipedia/commons/8/8c/Cristiano_Ronaldo_2018.jpg"
+                alt="Ronaldo"
+                className="w-10 h-10 sm:w-14 sm:h-14 md:w-20 md:h-20 rounded-full object-cover border-2 border-white shadow-lg"
+              />
+              <img
+                src="https://upload.wikimedia.org/wikipedia/commons/2/2c/Maradona-Mundial_86_con_la_copa.JPG"
+                alt="Maradona"
+                className="w-10 h-10 sm:w-14 sm:h-14 md:w-20 md:h-20 rounded-full object-cover border-2 border-white shadow-lg hidden sm:block"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -194,9 +186,38 @@ export default function Layout() {
       </header>
 
       {/* Page Content */}
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className="max-w-7xl mx-auto px-3 py-4 md:px-4 md:py-6 pb-24 md:pb-6">
         <Outlet />
       </main>
+
+      {/* Mobile Bottom Tab Bar */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50 safe-bottom">
+        <div className="flex justify-around items-center py-2">
+          {[
+            { to: '/', icon: '📊', label: 'Home' },
+            { to: '/predictions', icon: '🎯', label: 'Predict' },
+            { to: '/scores', icon: '📺', label: 'Results' },
+            { to: '/schedule', icon: '📅', label: 'Schedule' },
+            { to: '/leaderboard', icon: '🏆', label: 'Ranks' },
+          ].map((tab) => (
+            <NavLink
+              key={tab.to}
+              to={tab.to}
+              end={tab.to === '/'}
+              className={({ isActive }) =>
+                `flex flex-col items-center px-2 py-1 rounded-lg transition-colors ${
+                  isActive
+                    ? 'text-green-600 dark:text-green-400'
+                    : 'text-gray-500 dark:text-gray-400'
+                }`
+              }
+            >
+              <span className="text-xl">{tab.icon}</span>
+              <span className="text-[10px] font-medium mt-0.5">{tab.label}</span>
+            </NavLink>
+          ))}
+        </div>
+      </nav>
     </div>
   );
 }

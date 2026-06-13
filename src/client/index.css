@@ -79,6 +79,11 @@ body {
   }
 }
 
+/* ===== Mobile Safe Area ===== */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* ===== Scrollbar Styling ===== */
 ::-webkit-scrollbar {
   width: 6px;

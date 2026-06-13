@@ -5,6 +5,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import './db'; // Initialize database on startup
+import { bootstrapAdmin } from './bootstrap';
 
 import authRoutes from './routes/auth.routes';
 import adminRoutes from './routes/admin.routes';
@@ -21,6 +22,9 @@ import { startScorePoller } from './jobs/score-poller';
 import { startSchedulePoller } from './jobs/schedule-poller';
 import { startNewsPoller } from './jobs/news-poller';
 import { startEventPoller } from './jobs/event-poller';
+
+// Ensure admin user exists on startup
+bootstrapAdmin();
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001', 10);

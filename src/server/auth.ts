@@ -39,10 +39,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 // ─── JWT utilities ──────────────────────────────────────────────────────────
 
 function getJwtSecret(): string {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    throw new Error('JWT_SECRET environment variable is not set');
-  }
+  const secret = process.env.JWT_SECRET || 'tanay-soccer-league-secret-2026-default';
   return secret;
 }
 

@@ -149,7 +149,7 @@ function JoinForm() {
         throw new Error(data.error?.message || data.error || 'Request failed');
       }
 
-      setSuccess('Join request submitted! Wait for admin approval.');
+      setSuccess('Account created! You can now sign in.');
       setName(''); setEmail(''); setDisplayName(''); setPassword('');
     } catch (err: any) {
       setError(err.message || 'Something went wrong');

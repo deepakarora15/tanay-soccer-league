@@ -162,6 +162,81 @@ export default function AdminPanel() {
           </div>
         </div>
       </div>
+
+      {/* Player Predictions */}
+      <PlayerPredictions />
+    </div>
+  );
+}
+
+function PlayerPredictions() {
+  const { apiCall } = useApi();
+  const [matches, setMatches] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiCall<any[]>('/api/admin/all-predictions')
+      .then(setMatches)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent mx-auto"></div>
+      </div>
+    );
+  }
+
+  if (matches.length === 0) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 text-center">
+        <p className="text-gray-500 dark:text-gray-400">No predictions submitted yet for completed matches.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">🎯 Player Predictions</h3>
+      <div className="space-y-4">
+        {matches.map((match: any) => (
+          <div key={match.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="font-semibold text-gray-900 dark:text-white">
+                {match.homeTeam} {match.homeScore ?? '-'} — {match.awayScore ?? '-'} {match.awayTeam}
+              </span>
+              <span className="text-xs text-gray-400">{match.groupName}</span>
+            </div>
+            {match.predictions.length === 0 ? (
+              <p className="text-sm text-gray-400">No predictions for this match</p>
+            ) : (
+              <div className="space-y-1">
+                {match.predictions.map((p: any, i: number) => (
+                  <div key={i} className="flex items-center justify-between text-sm py-1 border-t border-gray-100 dark:border-gray-700">
+                    <span className="text-gray-700 dark:text-gray-300">{p.displayName}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono font-bold text-gray-900 dark:text-white">
+                        {p.predictedHomeScore} - {p.predictedAwayScore}
+                      </span>
+                      {p.pointsAwarded !== null && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                          p.pointsAwarded === 3 ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' :
+                          p.pointsAwarded === 1 ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300' :
+                          'bg-gray-100 dark:bg-gray-700 text-gray-500'
+                        }`}>
+                          +{p.pointsAwarded}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

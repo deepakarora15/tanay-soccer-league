@@ -133,7 +133,7 @@ router.post('/join-request', async (req: Request, res: Response) => {
       createNotification(admin.id, 'join_request', `New join request from ${displayName} (${email})`);
     }
 
-    res.status(201).json({ message: 'Join request submitted', userId });
+    res.status(201).json({ message: 'Account created! You can now log in.', userId });
   } catch (error) {
     console.error('Join request error:', error);
     res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } });

@@ -157,4 +157,74 @@ router.post('/tournament', requireAdmin, (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /predictions/:matchId
+ * Returns all players' predictions for a specific match (admin only).
+ */
+router.get('/predictions/:matchId', requireAdmin, (req: Request, res: Response) => {
+  try {
+    const { matchId } = req.params;
+
+    // Get the match info
+    const match = db.prepare(
+      'SELECT id, homeTeam, awayTeam, scheduledAt, homeScore, awayScore, status, groupName FROM Match WHERE id = ?'
+    ).get(matchId) as any;
+
+    if (!match) {
+      res.status(404).json({ error: 'Match not found' });
+      return;
+    }
+
+    // Get all predictions for this match with player names
+    const predictions = db.prepare(
+      'SELECT playerId, predictedHomeScore, predictedAwayScore, pointsAwarded, submittedAt FROM Prediction WHERE matchId = ?'
+    ).all(matchId) as Array<{ playerId: string; predictedHomeScore: number; predictedAwayScore: number; pointsAwarded: number | null; submittedAt: string }>;
+
+    // Get player names
+    const enriched = predictions.map((p: any) => {
+      const user = db.prepare('SELECT displayName FROM User WHERE id = ?').get(p.playerId) as any;
+      return {
+        ...p,
+        displayName: user?.displayName || 'Unknown',
+      };
+    });
+
+    res.json({ match, predictions: enriched });
+  } catch (error) {
+    console.error('Get match predictions error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /all-predictions
+ * Returns all predictions grouped by match (admin only).
+ */
+router.get('/all-predictions', requireAdmin, (req: Request, res: Response) => {
+  try {
+    const matches = db.prepare(
+      'SELECT id, homeTeam, awayTeam, scheduledAt, homeScore, awayScore, status, groupName FROM Match WHERE status != ?'
+    ).all('upcoming') as any[];
+
+    // For completed/live matches, show predictions
+    const result = matches.map((match: any) => {
+      const predictions = db.prepare(
+        'SELECT playerId, predictedHomeScore, predictedAwayScore, pointsAwarded FROM Prediction WHERE matchId = ?'
+      ).all(match.id) as any[];
+
+      const enriched = predictions.map((p: any) => {
+        const user = db.prepare('SELECT displayName FROM User WHERE id = ?').get(p.playerId) as any;
+        return { ...p, displayName: user?.displayName || 'Unknown' };
+      });
+
+      return { ...match, predictions: enriched };
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Get all predictions error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

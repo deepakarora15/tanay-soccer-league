@@ -16,6 +16,9 @@ export default function Scorecard() {
   const { apiCall } = useApi();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAllCompleted, setShowAllCompleted] = useState(false);
+  const [showAllLive, setShowAllLive] = useState(false);
+  const [showAllUpcoming, setShowAllUpcoming] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchMatches = async () => {
@@ -25,11 +28,10 @@ export default function Scorecard() {
         apiCall<Match[]>('/api/matches/upcoming').catch(() => []),
         apiCall<Match[]>('/api/matches/completed').catch(() => []),
       ]);
-      // Combine: live first, then completed (recent first), then upcoming (next few)
       const allMatches = [
         ...live,
         ...completed.sort((a, b) => b.scheduledAt.localeCompare(a.scheduledAt)),
-        ...upcoming.slice(0, 5),
+        ...upcoming,
       ];
       setMatches(allMatches);
     } catch {}
@@ -52,29 +54,49 @@ export default function Scorecard() {
   }
 
   const live = matches.filter((m) => m.status === 'live');
-  const upcoming = matches.filter((m) => m.status === 'upcoming');
   const completed = matches.filter((m) => m.status === 'completed');
+  const upcoming = matches.filter((m) => m.status === 'upcoming');
+
+  const displayedLive = showAllLive ? live : live.slice(0, 2);
+  const displayedCompleted = showAllCompleted ? completed : completed.slice(0, 2);
+  const displayedUpcoming = showAllUpcoming ? upcoming : upcoming.slice(0, 2);
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">📺 Live Scores</h2>
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">📺 Match Scores</h2>
 
+      {/* Live Matches */}
       {live.length > 0 && (
-        <Section title="🔴 Live Now" badge={<LiveDot />}>
-          {live.map((m) => <MatchCard key={m.id} match={m} />)}
-        </Section>
+        <CollapsibleSection
+          title="🔴 Live Now"
+          badge={<LiveDot />}
+          items={displayedLive}
+          totalCount={live.length}
+          showAll={showAllLive}
+          onToggle={() => setShowAllLive(!showAllLive)}
+        />
       )}
 
+      {/* Completed Matches */}
       {completed.length > 0 && (
-        <Section title="✅ Completed">
-          {completed.map((m) => <MatchCard key={m.id} match={m} />)}
-        </Section>
+        <CollapsibleSection
+          title="✅ Completed"
+          items={displayedCompleted}
+          totalCount={completed.length}
+          showAll={showAllCompleted}
+          onToggle={() => setShowAllCompleted(!showAllCompleted)}
+        />
       )}
 
+      {/* Upcoming Matches */}
       {upcoming.length > 0 && (
-        <Section title="⏳ Coming Up">
-          {upcoming.map((m) => <MatchCard key={m.id} match={m} />)}
-        </Section>
+        <CollapsibleSection
+          title="⏳ Upcoming"
+          items={displayedUpcoming}
+          totalCount={upcoming.length}
+          showAll={showAllUpcoming}
+          onToggle={() => setShowAllUpcoming(!showAllUpcoming)}
+        />
       )}
 
       {matches.length === 0 && (
@@ -87,14 +109,43 @@ export default function Scorecard() {
   );
 }
 
-function Section({ title, badge, children }: { title: string; badge?: ReactNode; children: ReactNode }) {
+function CollapsibleSection({
+  title,
+  badge,
+  items,
+  totalCount,
+  showAll,
+  onToggle,
+}: {
+  title: string;
+  badge?: ReactNode;
+  items: Match[];
+  totalCount: number;
+  showAll: boolean;
+  onToggle: () => void;
+}) {
   return (
     <div>
-      <div className="flex items-center gap-2 mb-3">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">{title}</h3>
-        {badge}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">{title}</h3>
+          {badge}
+          <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">{totalCount}</span>
+        </div>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{children}</div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((m) => (
+          <MatchCard key={m.id} match={m} />
+        ))}
+      </div>
+      {totalCount > 2 && (
+        <button
+          onClick={onToggle}
+          className="mt-3 w-full py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+        >
+          {showAll ? '▲ Show less' : `▼ Show all ${totalCount} matches`}
+        </button>
+      )}
     </div>
   );
 }

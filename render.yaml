@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: tanay-soccer-league
+    runtime: node
+    nodeVersion: 20.10.0
+    buildCommand: npm install && npm run build
+    startCommand: NODE_ENV=production npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORT
+        value: 3001

@@ -4,8 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
 
 const navLinks = [
-  { to: '/', label: 'Predict', icon: '🎯' },
-  { to: '/dashboard', label: 'Dashboard', icon: '📊' },
+  { to: '/', label: 'Dashboard', icon: '📊' },
+  { to: '/predictions', label: 'Predict', icon: '🎯' },
   { to: '/scores', label: 'Results', icon: '📺' },
   { to: '/schedule', label: 'Schedule', icon: '📅' },
   { to: '/news', label: 'News', icon: '📰' },
@@ -194,11 +194,11 @@ export default function Layout() {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50 safe-bottom">
         <div className="flex justify-around items-center py-2">
           {[
-            { to: '/', icon: '🎯', label: 'Predict' },
+            { to: '/', icon: '📊', label: 'Home' },
+            { to: '/predictions', icon: '🎯', label: 'Predict' },
             { to: '/scores', icon: '📺', label: 'Results' },
-            { to: '/schedule', icon: '📅', label: 'Schedule' },
             { to: '/leaderboard', icon: '🏆', label: 'Ranks' },
-            { to: '/dashboard', icon: '📊', label: 'Me' },
+            { to: '/schedule', icon: '📅', label: 'Schedule' },
           ].map((tab) => (
             <NavLink
               key={tab.to}

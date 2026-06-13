@@ -45,7 +45,8 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<Dashboard />} />
+        <Route path="/" element={<PredictionForm />} />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/predictions" element={<PredictionForm />} />
         <Route path="/scores" element={<Scorecard />} />
         <Route path="/schedule" element={<Schedule />} />

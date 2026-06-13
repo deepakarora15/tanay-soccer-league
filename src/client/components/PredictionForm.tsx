@@ -101,13 +101,27 @@ export default function PredictionForm() {
     );
   }
 
+  // Sort: upcoming unlocked matches first, then locked ones at the bottom
+  const unlocked = matches.filter(m => !isLocked(m));
+  const locked = matches.filter(m => isLocked(m));
+  const sortedMatches = [...unlocked, ...locked];
+
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">🎯 Make Predictions</h2>
-      <p className="text-sm text-gray-500 dark:text-gray-400">Predict the score for each match. 3 points for exact score, 1 point for correct outcome.</p>
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">🎯 Predict Scores</h2>
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        Submit your predictions before kick-off! 3 pts for exact score, 1 pt for correct outcome.
+      </p>
+
+      {unlocked.length === 0 && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl p-4 text-center">
+          <p className="text-yellow-800 dark:text-yellow-200 font-medium">⏰ No matches open for prediction right now</p>
+          <p className="text-yellow-600 dark:text-yellow-400 text-sm mt-1">Check back when the next matches are scheduled!</p>
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
-        {matches.map((match) => {
+        {sortedMatches.map((match) => {
           const locked = isLocked(match);
           const existing = predictions[match.id];
           const isSuccess = success === match.id;

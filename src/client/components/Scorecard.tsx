@@ -20,17 +20,16 @@ export default function Scorecard() {
 
   const fetchMatches = async () => {
     try {
-      // Fetch all match types
       const [live, upcoming, completed] = await Promise.all([
         apiCall<Match[]>('/api/matches/live').catch(() => []),
         apiCall<Match[]>('/api/matches/upcoming').catch(() => []),
         apiCall<Match[]>('/api/matches/completed').catch(() => []),
       ]);
-      // Combine and sort: live first, then upcoming (next 5), then completed (last 5)
+      // Combine: live first, then completed (recent first), then upcoming (next few)
       const allMatches = [
         ...live,
-        ...upcoming.slice(0, 8),
-        ...completed.slice(0, 5),
+        ...completed.sort((a, b) => b.scheduledAt.localeCompare(a.scheduledAt)),
+        ...upcoming.slice(0, 5),
       ];
       setMatches(allMatches);
     } catch {}
@@ -61,20 +60,20 @@ export default function Scorecard() {
       <h2 className="text-2xl font-bold text-gray-900 dark:text-white">📺 Live Scores</h2>
 
       {live.length > 0 && (
-        <Section title="Live" badge={<LiveDot />}>
+        <Section title="🔴 Live Now" badge={<LiveDot />}>
           {live.map((m) => <MatchCard key={m.id} match={m} />)}
         </Section>
       )}
 
-      {upcoming.length > 0 && (
-        <Section title="Upcoming">
-          {upcoming.map((m) => <MatchCard key={m.id} match={m} />)}
+      {completed.length > 0 && (
+        <Section title="✅ Completed">
+          {completed.map((m) => <MatchCard key={m.id} match={m} />)}
         </Section>
       )}
 
-      {completed.length > 0 && (
-        <Section title="Completed">
-          {completed.map((m) => <MatchCard key={m.id} match={m} />)}
+      {upcoming.length > 0 && (
+        <Section title="⏳ Coming Up">
+          {upcoming.map((m) => <MatchCard key={m.id} match={m} />)}
         </Section>
       )}
 

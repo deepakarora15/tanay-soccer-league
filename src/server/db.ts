@@ -147,40 +147,57 @@ const db = {
           
           if (!setMatch) return { changes: 0 };
           
-          // Parse SET assignments - they use ? placeholders
+          // Parse SET assignments - handle both literal values and ? placeholders
           const setParts = setMatch[1].split(',').map(s => s.trim());
-          const setFields: { field: string; paramIndex: number }[] = [];
+          const setAssignments: { field: string; literal?: string; paramIndex?: number }[] = [];
           let paramIdx = 0;
           
           for (const part of setParts) {
-            const [field] = part.split('=').map(s => s.trim());
-            setFields.push({ field, paramIndex: paramIdx++ });
+            const eqIdx = part.indexOf('=');
+            const field = part.substring(0, eqIdx).trim();
+            const valuePart = part.substring(eqIdx + 1).trim();
+            
+            if (valuePart === '?') {
+              setAssignments.push({ field, paramIndex: paramIdx++ });
+            } else {
+              // Literal value — strip quotes
+              const literal = valuePart.replace(/^'|'$/g, '');
+              setAssignments.push({ field, literal });
+            }
           }
           
           // Parse WHERE - remaining params are for WHERE clause
           let changes = 0;
-          const whereParamStart = setFields.length;
+          const whereParamStart = paramIdx;
           
           for (const item of collection) {
-            // Simple WHERE matching for common patterns
             let match = true;
             if (whereMatch) {
               const whereStr = whereMatch[1];
               const whereParts = whereStr.split(/\s+AND\s+/i);
               let wpIdx = whereParamStart;
               for (const wp of whereParts) {
-                const [field] = wp.split(/\s*=\s*/);
-                const cleanField = field.trim();
-                if (wp.includes('?')) {
+                const eqIdx = wp.indexOf('=');
+                if (eqIdx === -1) continue;
+                const cleanField = wp.substring(0, eqIdx).trim();
+                const valuePart = wp.substring(eqIdx + 1).trim();
+                if (valuePart === '?') {
                   if (item[cleanField] !== params[wpIdx]) match = false;
                   wpIdx++;
+                } else {
+                  const literal = valuePart.replace(/^'|'$/g, '');
+                  if (item[cleanField] !== literal) match = false;
                 }
               }
             }
             
             if (match) {
-              for (const sf of setFields) {
-                item[sf.field] = params[sf.paramIndex];
+              for (const sa of setAssignments) {
+                if (sa.paramIndex !== undefined) {
+                  item[sa.field] = params[sa.paramIndex];
+                } else {
+                  item[sa.field] = sa.literal;
+                }
               }
               changes++;
             }

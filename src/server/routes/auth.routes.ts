@@ -30,10 +30,15 @@ router.post('/login', async (req: Request, res: Response) => {
       return;
     }
 
-    // Check account status
-    if (user.status !== 'active') {
-      res.status(403).json({ error: 'Account is not active. Please contact an administrator.' });
+    // Check account status - only reject if explicitly rejected
+    if (user.status === 'rejected') {
+      res.status(403).json({ error: 'Your account has been rejected.' });
       return;
+    }
+
+    // Auto-activate pending users on login
+    if (user.status === 'pending') {
+      db.prepare("UPDATE User SET status = 'active', updatedAt = ? WHERE id = ?").run(new Date().toISOString(), user.id);
     }
 
     // Verify password

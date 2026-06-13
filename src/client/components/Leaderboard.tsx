@@ -3,11 +3,18 @@ import { useApi } from '../hooks/useApi';
 import { useAuth } from '../context/AuthContext';
 
 interface LeaderboardEntry {
-  userId: string;
+  playerId: string;
   displayName: string;
   totalPoints: number;
-  accuracy: number;
+  accuracy: number | null;
   rank: number;
+  exactPredictions: number;
+  correctOutcomes: number;
+}
+
+interface LeaderboardResponse {
+  entries: LeaderboardEntry[];
+  currentPlayer: LeaderboardEntry;
 }
 
 export default function Leaderboard() {
@@ -17,8 +24,8 @@ export default function Leaderboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiCall<LeaderboardEntry[]>('/api/leaderboard')
-      .then(setEntries)
+    apiCall<LeaderboardResponse>('/api/leaderboard')
+      .then((data) => setEntries(data.entries || []))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -40,12 +47,12 @@ export default function Leaderboard() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Leaderboard</h2>
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">🏆 Leaderboard</h2>
 
       {entries.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-4xl mb-2">📊</p>
-          <p className="text-gray-500 dark:text-gray-400">No leaderboard data yet.</p>
+          <p className="text-4xl mb-2">🏆</p>
+          <p className="text-gray-500 dark:text-gray-400">No rankings yet. Start predicting!</p>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
@@ -60,10 +67,10 @@ export default function Leaderboard() {
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {entries.map((entry) => {
-                const isCurrentUser = entry.userId === user?.id;
+                const isCurrentUser = entry.playerId === user?.id;
                 return (
                   <tr
-                    key={entry.userId}
+                    key={entry.playerId}
                     className={`${
                       isCurrentUser
                         ? 'bg-green-50 dark:bg-green-900/20 font-semibold'
@@ -87,7 +94,7 @@ export default function Leaderboard() {
                       {entry.totalPoints}
                     </td>
                     <td className="text-center px-4 py-3 text-gray-600 dark:text-gray-400 hidden sm:table-cell">
-                      {entry.accuracy}%
+                      {entry.accuracy !== null ? `${entry.accuracy}%` : '—'}
                     </td>
                   </tr>
                 );

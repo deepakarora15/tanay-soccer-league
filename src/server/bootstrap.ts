@@ -43,6 +43,10 @@ export async function bootstrapAdmin(): Promise<void> {
 
   // Seed matches if not exists
   const matchCount = await dbAll('SELECT id FROM Match LIMIT 1');
+
+  // Add matchMinute column if missing (migration)
+  try { await dbRun("ALTER TABLE Match ADD COLUMN matchMinute INTEGER"); } catch {}
+
   if (matchCount.length === 0) {
     await seedMatches();
     console.log('[bootstrap] Matches seeded');

@@ -91,7 +91,8 @@ export function startScorePoller(): cron.ScheduledTask {
   autoLockPastMatches().catch(() => {});
   pollScores().catch(() => {});
 
-  return cron.schedule('*/5 * * * *', async () => {
+  // Poll every 1 minute for near-real-time live scores
+  return cron.schedule('* * * * *', async () => {
     await autoLockPastMatches();
     await pollScores();
   });

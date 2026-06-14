@@ -59,7 +59,8 @@ async function initializeDatabase(): Promise<void> {
       groupName TEXT,
       predictionsLocked INTEGER NOT NULL DEFAULT 0,
       resultConfirmedAt TEXT,
-      externalId TEXT
+      externalId TEXT,
+      matchMinute INTEGER
     )`,
     `CREATE TABLE IF NOT EXISTS Prediction (
       id TEXT PRIMARY KEY,

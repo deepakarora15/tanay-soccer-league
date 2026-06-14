@@ -191,7 +191,10 @@ function LiveMatchesBanner() {
         {liveMatches.map((m: any) => (
           <div key={m.id} className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg p-3 border border-red-100 dark:border-red-800">
             <span className="font-medium text-gray-900 dark:text-white text-sm">{m.homeTeam}</span>
-            <span className="font-bold text-red-600 dark:text-red-400">{m.homeScore ?? 0} - {m.awayScore ?? 0}</span>
+            <div className="text-center">
+              <span className="font-bold text-red-600 dark:text-red-400">{m.homeScore ?? 0} - {m.awayScore ?? 0}</span>
+              {m.matchMinute && <p className="text-xs text-red-500 animate-live-pulse">{m.matchMinute}'</p>}
+            </div>
             <span className="font-medium text-gray-900 dark:text-white text-sm">{m.awayTeam}</span>
           </div>
         ))}

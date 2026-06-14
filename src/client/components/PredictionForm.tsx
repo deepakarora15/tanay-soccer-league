@@ -47,7 +47,7 @@ export default function PredictionForm() {
   }, []);
 
   const isLocked = (match: Match) => {
-    return match.predictionsLocked === 1 || new Date(match.scheduledAt) <= new Date();
+    return match.predictionsLocked === 1 || match.status !== 'upcoming' || new Date(match.scheduledAt) <= new Date();
   };
 
   const handleSubmit = async (matchId: string) => {

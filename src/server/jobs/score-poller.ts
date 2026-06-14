@@ -75,7 +75,16 @@ async function scorePredictions(matchId: string, homeScore: number, awayScore: n
 
 async function autoLockPastMatches(): Promise<void> {
   const now = new Date().toISOString();
-  await dbRun("UPDATE Match SET predictionsLocked = 1 WHERE status = 'upcoming' AND scheduledAt <= ? AND predictionsLocked = 0", now);
+  // Lock predictions for matches past their scheduled time
+  await dbRun(
+    "UPDATE Match SET predictionsLocked = 1 WHERE status = 'upcoming' AND scheduledAt <= ? AND predictionsLocked = 0",
+    now
+  );
+  // Set matches to 'live' if their scheduled time has passed but they haven't been marked as completed
+  await dbRun(
+    "UPDATE Match SET status = 'live', predictionsLocked = 1 WHERE status = 'upcoming' AND scheduledAt <= ?",
+    now
+  );
 }
 
 export function startScorePoller(): cron.ScheduledTask {

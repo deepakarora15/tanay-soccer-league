@@ -85,9 +85,12 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       };
     });
 
-    // Calculate closeness for tiebreaking (lower = closer to actual score)
+    // Calculate closeness for tiebreaking
+    // Rule: 1. Got winner right (outcome correct) ranks higher
+    //        2. Among same outcome, closest goal difference to actual ranks higher
     if (period === 'lastMatch' && (req as any).lastMatchInfo) {
       const matchInfo = (req as any).lastMatchInfo;
+      const actualGD = (matchInfo.homeScore || 0) - (matchInfo.awayScore || 0); // positive = home win
       const predictions = await dbAll(
         "SELECT playerId, predictedHomeScore, predictedAwayScore FROM Prediction WHERE matchId = ?",
         matchInfo.id
@@ -99,26 +102,41 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       entries.forEach((e: any) => {
         const pred = predMap[e.playerId];
         if (pred && matchInfo.homeScore !== null) {
-          // Closeness = absolute difference from actual score (lower is better)
-          e.closeness = Math.abs(pred.predictedHomeScore - matchInfo.homeScore) + Math.abs(pred.predictedAwayScore - matchInfo.awayScore);
+          const predGD = pred.predictedHomeScore - pred.predictedAwayScore;
+          const actualOutcome = Math.sign(actualGD); // 1=home win, -1=away win, 0=draw
+          const predOutcome = Math.sign(predGD);
+          
+          // Got winner right? (lower = better: 0 = correct outcome, 1 = wrong outcome)
+          e.outcomeCorrect = predOutcome === actualOutcome ? 0 : 1;
+          // Goal difference closeness (lower = better)
+          e.closeness = Math.abs(predGD - actualGD);
         } else {
-          e.closeness = 999; // no prediction = worst
+          e.outcomeCorrect = 2; // no prediction = worst
+          e.closeness = 999;
         }
       });
     }
 
-    // Sort: by points desc, then by closeness asc (closer = better)
+    // Sort: points desc → outcome correct first → closest goal difference
     entries.sort((a: any, b: any) => {
       if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
-      return a.closeness - b.closeness;
+      if (a.outcomeCorrect !== undefined && b.outcomeCorrect !== undefined) {
+        if (a.outcomeCorrect !== b.outcomeCorrect) return a.outcomeCorrect - b.outcomeCorrect;
+        return a.closeness - b.closeness;
+      }
+      return 0;
     });
 
-    // Assign ranks — same points AND same closeness = shared rank
+    // Assign ranks — same points + same outcome + same closeness = shared rank
     let currentRank = 1;
     entries.forEach((e: any, i: number) => {
       if (i === 0) {
         e.rank = 1;
-      } else if (e.totalPoints === entries[i - 1].totalPoints && e.closeness === entries[i - 1].closeness) {
+      } else if (
+        e.totalPoints === entries[i - 1].totalPoints &&
+        e.outcomeCorrect === entries[i - 1].outcomeCorrect &&
+        e.closeness === entries[i - 1].closeness
+      ) {
         e.rank = entries[i - 1].rank;
       } else {
         e.rank = i + 1;

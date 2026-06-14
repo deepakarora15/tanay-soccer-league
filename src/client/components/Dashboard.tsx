@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useApi } from '../hooks/useApi';
+import { useNavigate } from 'react-router-dom';
 
 interface DashboardData {
   totalPoints: number;
@@ -29,6 +30,7 @@ const achievementConfig: Record<string, { emoji: string; label: string }> = {
 
 export default function Dashboard() {
   const { apiCall } = useApi();
+  const navigate = useNavigate();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -58,9 +60,9 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Predict CTA Banner */}
-      <a
-        href="/predictions"
-        className="block bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 rounded-2xl p-5 text-white shadow-lg hover:shadow-xl transition-shadow"
+      <button
+        onClick={() => navigate('/predictions')}
+        className="w-full text-left bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 rounded-2xl p-5 text-white shadow-lg hover:shadow-xl transition-shadow active:scale-[0.98]"
       >
         <div className="flex items-center justify-between">
           <div>
@@ -69,7 +71,7 @@ export default function Dashboard() {
           </div>
           <span className="text-4xl">▶</span>
         </div>
-      </a>
+      </button>
 
       <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h2>
 

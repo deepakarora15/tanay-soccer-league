@@ -14,33 +14,31 @@ export default function AuthPages() {
           <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">Predict. Compete. Win.</p>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-gray-200 dark:border-gray-700 mx-6">
-          <button
-            onClick={() => setActiveTab('login')}
-            className={`flex-1 py-3 text-sm font-semibold transition-colors ${
-              activeTab === 'login'
-                ? 'text-green-600 border-b-2 border-green-600 dark:text-green-400 dark:border-green-400'
-                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            onClick={() => setActiveTab('join')}
-            className={`flex-1 py-3 text-sm font-semibold transition-colors ${
-              activeTab === 'join'
-                ? 'text-blue-600 border-b-2 border-blue-600 dark:text-blue-400 dark:border-blue-400'
-                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
-            }`}
-          >
-            Join League
-          </button>
-        </div>
-
         <div className="p-6">
-          {activeTab === 'login' && <LoginForm onForgot={() => setActiveTab('reset')} />}
-          {activeTab === 'join' && <JoinForm />}
+          {activeTab === 'login' && (
+            <>
+              <LoginForm onForgot={() => setActiveTab('reset')} />
+              <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 text-center">
+                <p className="text-sm text-gray-500 dark:text-gray-400">New User?</p>
+                <button
+                  onClick={() => setActiveTab('join')}
+                  className="mt-2 w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
+                >
+                  Join the League
+                </button>
+              </div>
+            </>
+          )}
+          {activeTab === 'join' && (
+            <>
+              <JoinForm />
+              <div className="mt-4 text-center">
+                <button onClick={() => setActiveTab('login')} className="text-sm text-green-600 dark:text-green-400 hover:underline">
+                  ← Already have an account? Sign In
+                </button>
+              </div>
+            </>
+          )}
           {activeTab === 'reset' && <ResetForm onBack={() => setActiveTab('login')} />}
         </div>
       </div>

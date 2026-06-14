@@ -267,15 +267,13 @@ function LiveScoresWidget() {
       <div className="flex items-center gap-2 mb-3">
         <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-live-pulse"></span>
         <h3 className="font-bold text-red-700 dark:text-red-300">LIVE NOW</h3>
+        <span className="text-xs text-red-400 ml-auto">Score may be updated with 2 min lag</span>
       </div>
       <div className="space-y-2">
         {liveMatches.map((m: any) => (
           <div key={m.id} className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg p-3 border border-red-100 dark:border-red-800">
             <span className="font-semibold text-gray-900 dark:text-white text-sm">{m.homeTeam}</span>
-            <div className="text-center">
-              <span className="font-bold text-lg text-red-600 dark:text-red-400">{m.homeScore ?? 0} - {m.awayScore ?? 0}</span>
-              {m.matchMinute && <p className="text-xs text-red-500 animate-live-pulse">{m.matchMinute}'</p>}
-            </div>
+            <span className="font-bold text-lg text-red-600 dark:text-red-400">{m.homeScore ?? 0} - {m.awayScore ?? 0}</span>
             <span className="font-semibold text-gray-900 dark:text-white text-sm">{m.awayTeam}</span>
           </div>
         ))}

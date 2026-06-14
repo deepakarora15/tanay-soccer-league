@@ -1,20 +1,11 @@
 import { Router, Request, Response } from 'express';
+import { v4 as uuidv4 } from 'uuid';
 import { requirePlayer } from '../auth';
-import {
-  validateScore,
-  isPredictionWindowOpen,
-  submitPrediction,
-  getPlayerPredictions,
-} from '../services/prediction.service';
+import { dbGet, dbRun, dbAll } from '../db';
 
 const router = Router();
 
-/**
- * POST /
- * Submits a prediction for a match. Requires player auth.
- * Body: { matchId, homeScore, awayScore }
- */
-router.post('/', requirePlayer, (req: Request, res: Response) => {
+router.post('/', requirePlayer, async (req: Request, res: Response) => {
   try {
     const { matchId, homeScore, awayScore } = req.body;
     const playerId = req.user!.id;
@@ -24,54 +15,59 @@ router.post('/', requirePlayer, (req: Request, res: Response) => {
       return;
     }
 
-    // Validate scores
-    const homeValidation = validateScore(homeScore);
-    if (!homeValidation.valid) {
-      res.status(400).json({ error: homeValidation.error });
+    if (!Number.isInteger(homeScore) || homeScore < 0 || homeScore > 99) {
+      res.status(400).json({ error: 'Score must be a whole number between 0 and 99' });
+      return;
+    }
+    if (!Number.isInteger(awayScore) || awayScore < 0 || awayScore > 99) {
+      res.status(400).json({ error: 'Score must be a whole number between 0 and 99' });
       return;
     }
 
-    const awayValidation = validateScore(awayScore);
-    if (!awayValidation.valid) {
-      res.status(400).json({ error: awayValidation.error });
-      return;
-    }
-
-    // Check prediction window
-    if (!isPredictionWindowOpen(matchId)) {
+    const match = await dbGet('SELECT status, predictionsLocked FROM Match WHERE id = ?', matchId);
+    if (!match || match.status !== 'upcoming' || match.predictionsLocked === 1) {
       res.status(403).json({ error: 'Prediction window is closed' });
       return;
     }
 
-    const prediction = submitPrediction(playerId, matchId, homeScore, awayScore);
+    const now = new Date().toISOString();
+    const existing = await dbGet('SELECT id FROM Prediction WHERE playerId = ? AND matchId = ?', playerId, matchId);
 
-    res.status(201).json(prediction);
-  } catch (error: any) {
-    if (error.message === 'Prediction window is closed') {
-      res.status(403).json({ error: error.message });
-      return;
+    if (existing) {
+      await dbRun(
+        'UPDATE Prediction SET predictedHomeScore = ?, predictedAwayScore = ?, updatedAt = ? WHERE id = ?',
+        homeScore, awayScore, now, existing.id
+      );
+    } else {
+      const id = uuidv4();
+      await dbRun(
+        'INSERT INTO Prediction (id, playerId, matchId, predictedHomeScore, predictedAwayScore, submittedAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        id, playerId, matchId, homeScore, awayScore, now, now
+      );
     }
-    console.error('Submit prediction error:', error);
+
+    res.status(201).json({ matchId, predictedHomeScore: homeScore, predictedAwayScore: awayScore, submittedAt: now });
+  } catch (error: any) {
+    console.error('Prediction error:', error.message);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-/**
- * GET /my
- * Returns the authenticated player's predictions with optional pagination.
- * Query params: ?limit=&offset=
- */
-router.get('/my', requirePlayer, (req: Request, res: Response) => {
+router.get('/my', requirePlayer, async (req: Request, res: Response) => {
   try {
     const playerId = req.user!.id;
-    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
-    const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
-
-    const predictions = getPlayerPredictions(playerId, limit, offset);
-
+    const predictions = await dbAll(
+      `SELECT p.id, p.matchId, p.predictedHomeScore, p.predictedAwayScore, p.pointsAwarded, p.submittedAt,
+              m.homeTeam, m.awayTeam
+       FROM Prediction p
+       LEFT JOIN Match m ON p.matchId = m.id
+       WHERE p.playerId = ?
+       ORDER BY p.submittedAt DESC`,
+      playerId
+    );
     res.json(predictions);
-  } catch (error) {
-    console.error('Get predictions error:', error);
+  } catch (error: any) {
+    console.error('Get predictions error:', error.message);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -1,97 +1,63 @@
 import { Router, Request, Response } from 'express';
+import { v4 as uuidv4 } from 'uuid';
 import { requirePlayer } from '../auth';
-import { getFavorites, addFavoriteTeam, addFavoritePlayer, removeFavorite } from '../services/favorites.service';
+import { dbAll, dbGet, dbRun } from '../db';
 
 const router = Router();
 
-/**
- * GET /
- * Returns player's favorites grouped by teams and players.
- */
-router.get('/', requirePlayer, (req: Request, res: Response) => {
+router.get('/', requirePlayer, async (req: Request, res: Response) => {
   try {
     const playerId = req.user!.id;
-    const favorites = getFavorites(playerId);
-    res.json(favorites);
-  } catch (error) {
-    console.error('Get favorites error:', error);
+    const teams = await dbAll("SELECT * FROM Favorite WHERE playerId = ? AND type = 'team'", playerId);
+    const players = await dbAll("SELECT * FROM Favorite WHERE playerId = ? AND type = 'player'", playerId);
+    res.json({ teams, players });
+  } catch (error: any) {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-/**
- * PUT /teams
- * Adds a team favorite. Body: { entityName, entityId }
- * Returns 400 if limit exceeded.
- */
-router.put('/teams', requirePlayer, (req: Request, res: Response) => {
+router.put('/teams', requirePlayer, async (req: Request, res: Response) => {
   try {
     const playerId = req.user!.id;
     const { entityName, entityId } = req.body;
+    if (!entityName || !entityId) { res.status(400).json({ error: 'entityName and entityId required' }); return; }
 
-    if (!entityName || !entityId) {
-      res.status(400).json({ error: 'entityName and entityId are required' });
-      return;
-    }
+    const count = await dbAll("SELECT id FROM Favorite WHERE playerId = ? AND type = 'team'", playerId);
+    if (count.length >= 5) { res.status(400).json({ error: 'Maximum of 5 favorite teams reached' }); return; }
 
-    const favorite = addFavoriteTeam(playerId, entityName, entityId);
-    res.status(201).json(favorite);
+    const id = uuidv4();
+    await dbRun('INSERT INTO Favorite (id, playerId, type, entityName, entityId, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
+      id, playerId, 'team', entityName, entityId, new Date().toISOString());
+    res.status(201).json({ id, entityName, entityId });
   } catch (error: any) {
-    if (error.message?.includes('Maximum')) {
-      res.status(400).json({ error: error.message });
-      return;
-    }
-    console.error('Add favorite team error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-/**
- * PUT /players
- * Adds a player favorite. Body: { entityName, entityId }
- * Returns 400 if limit exceeded.
- */
-router.put('/players', requirePlayer, (req: Request, res: Response) => {
+router.put('/players', requirePlayer, async (req: Request, res: Response) => {
   try {
     const playerId = req.user!.id;
     const { entityName, entityId } = req.body;
+    if (!entityName || !entityId) { res.status(400).json({ error: 'entityName and entityId required' }); return; }
 
-    if (!entityName || !entityId) {
-      res.status(400).json({ error: 'entityName and entityId are required' });
-      return;
-    }
+    const count = await dbAll("SELECT id FROM Favorite WHERE playerId = ? AND type = 'player'", playerId);
+    if (count.length >= 10) { res.status(400).json({ error: 'Maximum of 10 favorite players reached' }); return; }
 
-    const favorite = addFavoritePlayer(playerId, entityName, entityId);
-    res.status(201).json(favorite);
+    const id = uuidv4();
+    await dbRun('INSERT INTO Favorite (id, playerId, type, entityName, entityId, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
+      id, playerId, 'player', entityName, entityId, new Date().toISOString());
+    res.status(201).json({ id, entityName, entityId });
   } catch (error: any) {
-    if (error.message?.includes('Maximum')) {
-      res.status(400).json({ error: error.message });
-      return;
-    }
-    console.error('Add favorite player error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-/**
- * DELETE /:id
- * Removes a favorite.
- */
-router.delete('/:id', requirePlayer, (req: Request, res: Response) => {
+router.delete('/:id', requirePlayer, async (req: Request, res: Response) => {
   try {
     const playerId = req.user!.id;
-    const favoriteId = req.params.id;
-
-    const deleted = removeFavorite(playerId, favoriteId);
-
-    if (!deleted) {
-      res.status(404).json({ error: 'Favorite not found' });
-      return;
-    }
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Remove favorite error:', error);
+    const result = await dbRun('DELETE FROM Favorite WHERE id = ? AND playerId = ?', req.params.id, playerId);
+    res.json({ success: result.changes > 0 });
+  } catch (error: any) {
     res.status(500).json({ error: 'Internal server error' });
   }
 });

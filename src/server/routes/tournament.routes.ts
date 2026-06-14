@@ -1,50 +1,28 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth } from '../auth';
-import { determineTournamentWinner } from '../services/league.service';
-import db from '../db';
+import { dbAll, dbGet } from '../db';
 
 const router = Router();
 
-/**
- * GET /standings
- * Returns tournament standings and winner(s).
- * Requires authentication.
- */
-router.get('/standings', requireAuth, (req: Request, res: Response) => {
+router.get('/standings', requireAuth, async (req: Request, res: Response) => {
   try {
-    // Get the active or most recent tournament
-    const tournament = db.prepare(
-      `SELECT id, name, startDate, endDate, status
-       FROM Tournament
-       ORDER BY
-         CASE status
-           WHEN 'active' THEN 0
-           WHEN 'completed' THEN 1
-           WHEN 'upcoming' THEN 2
-         END,
-         startDate DESC
-       LIMIT 1`
-    ).get() as { id: string; name: string; startDate: string; endDate: string; status: string } | undefined;
+    const tournament = await dbGet("SELECT * FROM Tournament LIMIT 1");
+    if (!tournament) { res.status(404).json({ error: 'No tournament found' }); return; }
 
-    if (!tournament) {
-      res.status(404).json({ error: 'No tournament found' });
-      return;
-    }
+    const standings = await dbAll(
+      `SELECT u.id as playerId, u.displayName,
+              COALESCE(SUM(p.pointsAwarded), 0) as totalPoints,
+              COUNT(CASE WHEN p.pointsAwarded = 3 THEN 1 END) as exactPredictions,
+              COUNT(CASE WHEN p.pointsAwarded >= 1 THEN 1 END) as correctOutcomes
+       FROM User u
+       LEFT JOIN Prediction p ON u.id = p.playerId
+       WHERE u.status = 'active'
+       GROUP BY u.id, u.displayName
+       ORDER BY totalPoints DESC`
+    );
 
-    const result = determineTournamentWinner(tournament.id);
-
-    res.json({
-      tournament: {
-        id: tournament.id,
-        name: tournament.name,
-        startDate: tournament.startDate,
-        endDate: tournament.endDate,
-        status: tournament.status,
-      },
-      ...result,
-    });
-  } catch (error) {
-    console.error('Get tournament standings error:', error);
+    res.json({ tournament, standings, isCompleted: tournament.status === 'completed', winners: [] });
+  } catch (error: any) {
     res.status(500).json({ error: 'Internal server error' });
   }
 });

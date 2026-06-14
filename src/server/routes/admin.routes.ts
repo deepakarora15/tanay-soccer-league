@@ -1,228 +1,59 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import db from '../db';
+import { dbGet, dbAll, dbRun } from '../db';
 import { requireAdmin } from '../auth';
-import { createNotification, createLeague, createTournament } from '../services/league.service';
 
 const router = Router();
 
-/**
- * GET /join-requests
- * Returns all users with status 'pending'.
- */
-router.get('/join-requests', requireAdmin, (req: Request, res: Response) => {
+router.get('/join-requests', requireAdmin, async (req: Request, res: Response) => {
   try {
-    const pendingUsers = db.prepare(
-      "SELECT id, email, displayName, role, status, createdAt FROM User WHERE status = 'pending'"
-    ).all();
-
-    res.json(pendingUsers);
-  } catch (error) {
-    console.error('Get join requests error:', error);
+    const pending = await dbAll("SELECT id, email, displayName, createdAt, status FROM User WHERE status = 'pending'");
+    res.json(pending);
+  } catch (error: any) {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-/**
- * POST /join-requests/:id/approve
- * Approves a pending user by setting their status to 'active'.
- */
-router.post('/join-requests/:id/approve', requireAdmin, (req: Request, res: Response) => {
+router.post('/join-requests/:id/approve', requireAdmin, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-
-    const user = db.prepare('SELECT id, displayName, status FROM User WHERE id = ?').get(id) as
-      | { id: string; displayName: string; status: string }
-      | undefined;
-
-    if (!user) {
-      res.status(404).json({ error: 'User not found' });
-      return;
-    }
-
-    if (user.status !== 'pending') {
-      res.status(400).json({ error: 'User is not in pending status' });
-      return;
-    }
-
-    const now = new Date().toISOString();
-    db.prepare("UPDATE User SET status = 'active', updatedAt = ? WHERE id = ?").run(now, id);
-
-    createNotification(id, 'approval', 'Your join request has been approved. Welcome to the league!');
-
+    await dbRun("UPDATE User SET status = 'active', updatedAt = ? WHERE id = ?", new Date().toISOString(), id);
     res.json({ message: 'User approved', userId: id });
-  } catch (error) {
-    console.error('Approve join request error:', error);
+  } catch (error: any) {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-/**
- * POST /join-requests/:id/reject
- * Rejects a pending user with an optional reason.
- */
-router.post('/join-requests/:id/reject', requireAdmin, (req: Request, res: Response) => {
+router.post('/join-requests/:id/reject', requireAdmin, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { reason } = req.body;
-
-    const user = db.prepare('SELECT id, displayName, status FROM User WHERE id = ?').get(id) as
-      | { id: string; displayName: string; status: string }
-      | undefined;
-
-    if (!user) {
-      res.status(404).json({ error: 'User not found' });
-      return;
-    }
-
-    if (user.status !== 'pending') {
-      res.status(400).json({ error: 'User is not in pending status' });
-      return;
-    }
-
-    const now = new Date().toISOString();
-    db.prepare("UPDATE User SET status = 'rejected', rejectionReason = ?, updatedAt = ? WHERE id = ?").run(
-      reason || null,
-      now,
-      id
-    );
-
-    const message = reason
-      ? `Your join request has been rejected. Reason: ${reason}`
-      : 'Your join request has been rejected.';
-
-    createNotification(id, 'rejection', message);
-
+    await dbRun("UPDATE User SET status = 'rejected', rejectionReason = ?, updatedAt = ? WHERE id = ?", reason || null, new Date().toISOString(), id);
     res.json({ message: 'User rejected', userId: id });
-  } catch (error) {
-    console.error('Reject join request error:', error);
+  } catch (error: any) {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-/**
- * POST /league
- * Creates a new league. The requesting admin is assigned as the league admin.
- */
-router.post('/league', requireAdmin, (req: Request, res: Response) => {
+router.get('/all-predictions', requireAdmin, async (req: Request, res: Response) => {
   try {
-    const { name, tournamentId } = req.body;
+    const matches = await dbAll("SELECT id, homeTeam, awayTeam, scheduledAt, homeScore, awayScore, status, groupName FROM Match WHERE status != 'upcoming' ORDER BY scheduledAt DESC");
 
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      res.status(400).json({ error: 'League name is required' });
-      return;
+    const result = [];
+    for (const match of matches) {
+      const predictions = await dbAll(
+        `SELECT p.playerId, p.predictedHomeScore, p.predictedAwayScore, p.pointsAwarded, u.displayName
+         FROM Prediction p
+         LEFT JOIN User u ON p.playerId = u.id
+         WHERE p.matchId = ?`,
+        match.id
+      );
+      result.push({ ...match, predictions });
     }
-
-    const adminId = req.user!.id;
-
-    // Update the admin's role to admin_player
-    db.prepare("UPDATE User SET role = 'admin_player', updatedAt = ? WHERE id = ?").run(
-      new Date().toISOString(),
-      adminId
-    );
-
-    const league = createLeague(name.trim(), adminId, tournamentId);
-
-    res.status(201).json(league);
-  } catch (error) {
-    console.error('Create league error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-/**
- * POST /tournament
- * Creates a new tournament.
- */
-router.post('/tournament', requireAdmin, (req: Request, res: Response) => {
-  try {
-    const { name, startDate, endDate } = req.body;
-
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      res.status(400).json({ error: 'Tournament name is required' });
-      return;
-    }
-
-    if (!startDate || !endDate) {
-      res.status(400).json({ error: 'Start date and end date are required' });
-      return;
-    }
-
-    const tournament = createTournament(name.trim(), startDate, endDate);
-
-    res.status(201).json(tournament);
-  } catch (error) {
-    console.error('Create tournament error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-/**
- * GET /predictions/:matchId
- * Returns all players' predictions for a specific match (admin only).
- */
-router.get('/predictions/:matchId', requireAdmin, (req: Request, res: Response) => {
-  try {
-    const { matchId } = req.params;
-
-    // Get the match info
-    const match = db.prepare(
-      'SELECT id, homeTeam, awayTeam, scheduledAt, homeScore, awayScore, status, groupName FROM Match WHERE id = ?'
-    ).get(matchId) as any;
-
-    if (!match) {
-      res.status(404).json({ error: 'Match not found' });
-      return;
-    }
-
-    // Get all predictions for this match with player names
-    const predictions = db.prepare(
-      'SELECT playerId, predictedHomeScore, predictedAwayScore, pointsAwarded, submittedAt FROM Prediction WHERE matchId = ?'
-    ).all(matchId) as Array<{ playerId: string; predictedHomeScore: number; predictedAwayScore: number; pointsAwarded: number | null; submittedAt: string }>;
-
-    // Get player names
-    const enriched = predictions.map((p: any) => {
-      const user = db.prepare('SELECT displayName FROM User WHERE id = ?').get(p.playerId) as any;
-      return {
-        ...p,
-        displayName: user?.displayName || 'Unknown',
-      };
-    });
-
-    res.json({ match, predictions: enriched });
-  } catch (error) {
-    console.error('Get match predictions error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-/**
- * GET /all-predictions
- * Returns all predictions grouped by match (admin only).
- */
-router.get('/all-predictions', requireAdmin, (req: Request, res: Response) => {
-  try {
-    const matches = db.prepare(
-      'SELECT id, homeTeam, awayTeam, scheduledAt, homeScore, awayScore, status, groupName FROM Match WHERE status != ?'
-    ).all('upcoming') as any[];
-
-    // For completed/live matches, show predictions
-    const result = matches.map((match: any) => {
-      const predictions = db.prepare(
-        'SELECT playerId, predictedHomeScore, predictedAwayScore, pointsAwarded FROM Prediction WHERE matchId = ?'
-      ).all(match.id) as any[];
-
-      const enriched = predictions.map((p: any) => {
-        const user = db.prepare('SELECT displayName FROM User WHERE id = ?').get(p.playerId) as any;
-        return { ...p, displayName: user?.displayName || 'Unknown' };
-      });
-
-      return { ...match, predictions: enriched };
-    });
 
     res.json(result);
-  } catch (error) {
-    console.error('Get all predictions error:', error);
+  } catch (error: any) {
+    console.error('Admin predictions error:', error.message);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -106,6 +106,15 @@ async function initializeDatabase(): Promise<void> {
       read INTEGER NOT NULL DEFAULT 0,
       createdAt TEXT NOT NULL
     )`,
+    `CREATE TABLE IF NOT EXISTS TopScorers (
+      rank INTEGER,
+      playerName TEXT NOT NULL,
+      team TEXT NOT NULL,
+      goals INTEGER NOT NULL DEFAULT 0,
+      assists INTEGER NOT NULL DEFAULT 0,
+      matchesPlayed INTEGER NOT NULL DEFAULT 0,
+      updatedAt TEXT NOT NULL
+    )`,
   ];
 
   for (const sql of tables) {

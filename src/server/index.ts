@@ -17,6 +17,7 @@ import favoritesRoutes from './routes/favorites.routes';
 import feedRoutes from './routes/feed.routes';
 import leaderboardRoutes from './routes/leaderboard.routes';
 import tournamentRoutes from './routes/tournament.routes';
+import scorersRoutes from './routes/scorers.routes';
 import { cache } from './cache';
 import { startScorePoller } from './jobs/score-poller';
 import { startSchedulePoller } from './jobs/schedule-poller';
@@ -49,6 +50,7 @@ app.use('/api/favorites', favoritesRoutes);
 app.use('/api/feed', feedRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/tournament', tournamentRoutes);
+app.use('/api/scorers', scorersRoutes);
 
 // In production, serve static frontend build
 if (process.env.NODE_ENV === 'production') {

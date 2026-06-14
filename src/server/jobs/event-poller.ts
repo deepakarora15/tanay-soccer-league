@@ -1,16 +1,18 @@
 import cron from 'node-cron';
+import { fetchScorersFromAPI } from '../routes/scorers.routes';
 
 /**
- * Polls events every 2 minutes.
- * Placeholder — full implementation will come with Task 17.
+ * Refreshes top scorers every 30 minutes.
  */
 export function startEventPoller(): cron.ScheduledTask {
-  return cron.schedule('*/2 * * * *', async () => {
+  // Fetch on startup
+  fetchScorersFromAPI().catch(() => {});
+
+  return cron.schedule('*/30 * * * *', async () => {
     try {
-      // TODO: Implement event fetching in Task 17
-      console.log('[event-poller] Event polling not yet implemented');
-    } catch (error) {
-      console.error('[event-poller] Error polling events:', error);
+      await fetchScorersFromAPI();
+    } catch (error: any) {
+      console.error('[event-poller] Scorers refresh error:', error.message);
     }
   });
 }

@@ -20,9 +20,11 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       dateFilter = ` AND m.resultConfirmedAt >= '${weekAgo}'`;
     } else if (period === 'lastMatch') {
       // Get the most recently completed match
-      const lastMatch = await dbAll("SELECT id FROM Match WHERE status = 'completed' ORDER BY resultConfirmedAt DESC LIMIT 1");
+      const lastMatch = await dbAll("SELECT id, homeTeam, awayTeam, homeScore, awayScore FROM Match WHERE status = 'completed' ORDER BY resultConfirmedAt DESC LIMIT 1");
       if (lastMatch.length > 0) {
         dateFilter = ` AND p.matchId = '${lastMatch[0].id}'`;
+        // We'll attach match info and predictions to the response
+        (req as any).lastMatchInfo = lastMatch[0];
       } else {
         res.json({ entries: [], currentPlayer: { rank: 1, playerId, displayName: 'You', totalPoints: 0, accuracy: null, exactPredictions: 0, correctOutcomes: 0 } });
         return;
@@ -87,7 +89,31 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       entries.push(currentPlayer);
     }
 
-    res.json({ entries, currentPlayer });
+    // For lastMatch period, include match info and each player's prediction
+    let lastMatchData = null;
+    if (period === 'lastMatch' && (req as any).lastMatchInfo) {
+      const matchInfo = (req as any).lastMatchInfo;
+      const predictions = await dbAll(
+        "SELECT p.playerId, p.predictedHomeScore, p.predictedAwayScore FROM Prediction WHERE matchId = ?",
+        matchInfo.id
+      );
+      const predMap: Record<string, { home: number; away: number }> = {};
+      for (const p of predictions) {
+        predMap[p.playerId] = { home: p.predictedHomeScore, away: p.predictedAwayScore };
+      }
+      // Attach prediction to each entry
+      entries.forEach((e: any) => {
+        e.prediction = predMap[e.playerId] || null;
+      });
+      lastMatchData = {
+        homeTeam: matchInfo.homeTeam,
+        awayTeam: matchInfo.awayTeam,
+        homeScore: matchInfo.homeScore,
+        awayScore: matchInfo.awayScore,
+      };
+    }
+
+    res.json({ entries, currentPlayer, lastMatch: lastMatchData });
   } catch (error: any) {
     console.error('Leaderboard error:', error.message);
     res.status(500).json({ error: 'Internal server error' });

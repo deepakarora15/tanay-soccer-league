@@ -15,6 +15,12 @@ interface LeaderboardEntry {
 interface LeaderboardResponse {
   entries: LeaderboardEntry[];
   currentPlayer: LeaderboardEntry;
+  lastMatch?: {
+    homeTeam: string;
+    awayTeam: string;
+    homeScore: number;
+    awayScore: number;
+  };
 }
 
 type Period = 'overall' | 'week' | 'today' | 'lastMatch';
@@ -23,13 +29,14 @@ export default function Leaderboard() {
   const { apiCall } = useApi();
   const { user } = useAuth();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [lastMatch, setLastMatch] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<Period>('overall');
 
   useEffect(() => {
     setLoading(true);
     apiCall<LeaderboardResponse>(`/api/leaderboard?period=${period}`)
-      .then((data) => setEntries(data.entries || []))
+      .then((data) => { setEntries(data.entries || []); setLastMatch(data.lastMatch || null); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [period]);
@@ -84,13 +91,20 @@ export default function Leaderboard() {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+          {/* Last match actual score banner */}
+          {period === 'lastMatch' && lastMatch && (
+            <div className="bg-green-600 text-white px-4 py-3 text-center">
+              <p className="text-xs opacity-80">Actual Score</p>
+              <p className="text-lg font-bold">{lastMatch.homeTeam} {lastMatch.homeScore} - {lastMatch.awayScore} {lastMatch.awayTeam}</p>
+            </div>
+          )}
           <table className="w-full text-sm">
             <thead className="bg-gradient-to-r from-blue-500 to-green-500 text-white">
               <tr>
                 <th className="text-left px-3 py-3 font-semibold w-[40px]">#</th>
                 <th className="text-left px-3 py-3 font-semibold">Player</th>
+                {period === 'lastMatch' && <th className="text-center px-3 py-3 font-semibold">Predicted</th>}
                 <th className="text-center px-3 py-3 font-semibold">Points</th>
-                <th className="text-center px-3 py-3 font-semibold hidden sm:table-cell">Exact</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -112,8 +126,12 @@ export default function Leaderboard() {
                         <span className="ml-2 text-xs bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200 px-2 py-0.5 rounded-full">You</span>
                       )}
                     </td>
+                    {period === 'lastMatch' && (
+                      <td className="text-center px-3 py-3 font-mono text-gray-700 dark:text-gray-300">
+                        {(entry as any).prediction ? `${(entry as any).prediction.home} - ${(entry as any).prediction.away}` : '—'}
+                      </td>
+                    )}
                     <td className="text-center px-3 py-3 font-bold text-blue-600 dark:text-blue-400">{entry.totalPoints}</td>
-                    <td className="text-center px-3 py-3 text-gray-600 dark:text-gray-400 hidden sm:table-cell">{entry.exactPredictions}🎯</td>
                   </tr>
                 );
               })}

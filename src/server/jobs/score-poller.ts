@@ -32,13 +32,22 @@ async function pollScores(): Promise<void> {
       const isLive = ['IN_PLAY', 'PAUSED', 'LIVE'].includes(ext.status);
       const isFinished = ['FINISHED', 'AWARDED'].includes(ext.status);
 
+      // Calculate approximate minute from scheduled time if API doesn't provide it
+      let minute = ext.minute || null;
+      if (!minute && isLive && ext.utcDate) {
+        const kickoff = new Date(ext.utcDate).getTime();
+        const elapsed = Math.floor((Date.now() - kickoff) / 60000);
+        minute = Math.min(elapsed, 90); // cap at 90
+        if (minute < 0) minute = null;
+      }
+
       if (isLive && dbMatch.status === 'upcoming') {
-        await dbRun("UPDATE Match SET status = 'live', predictionsLocked = 1, homeScore = ?, awayScore = ? WHERE id = ?", homeScore, awayScore, dbMatch.id);
-        console.log(`[score-poller] LIVE: ${homeTeam} ${homeScore}-${awayScore} ${awayTeam}`);
+        await dbRun("UPDATE Match SET status = 'live', predictionsLocked = 1, homeScore = ?, awayScore = ?, matchMinute = ? WHERE id = ?", homeScore, awayScore, minute, dbMatch.id);
+        console.log(`[score-poller] LIVE: ${homeTeam} ${homeScore}-${awayScore} ${awayTeam} (${minute}')`);
       } else if (isLive) {
-        await dbRun("UPDATE Match SET homeScore = ?, awayScore = ? WHERE id = ?", homeScore, awayScore, dbMatch.id);
+        await dbRun("UPDATE Match SET homeScore = ?, awayScore = ?, matchMinute = ?, status = 'live' WHERE id = ?", homeScore, awayScore, minute, dbMatch.id);
       } else if (isFinished && dbMatch.status !== 'completed') {
-        await dbRun("UPDATE Match SET status = 'completed', predictionsLocked = 1, homeScore = ?, awayScore = ?, resultConfirmedAt = ? WHERE id = ?", homeScore, awayScore, new Date().toISOString(), dbMatch.id);
+        await dbRun("UPDATE Match SET status = 'completed', predictionsLocked = 1, homeScore = ?, awayScore = ?, matchMinute = 90, resultConfirmedAt = ? WHERE id = ?", homeScore, awayScore, new Date().toISOString(), dbMatch.id);
         console.log(`[score-poller] FINAL: ${homeTeam} ${homeScore}-${awayScore} ${awayTeam}`);
         await scorePredictions(dbMatch.id, homeScore, awayScore);
       }
@@ -49,13 +58,35 @@ async function pollScores(): Promise<void> {
 }
 
 async function findMatch(homeTeam: string, awayTeam: string): Promise<any> {
-  let match = await dbAll("SELECT id, status FROM Match WHERE homeTeam = ? AND awayTeam = ?", homeTeam, awayTeam);
-  if (match.length > 0) return match[0];
-  // Try first word match for naming differences
-  const h = homeTeam.split(' ')[0];
-  const a = awayTeam.split(' ')[0];
-  match = await dbAll("SELECT id, status FROM Match WHERE homeTeam LIKE ? AND awayTeam LIKE ?", `%${h}%`, `%${a}%`);
-  return match.length > 0 ? match[0] : null;
+  // Normalize: remove accents and try various matching
+  const normalize = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const h = normalize(homeTeam);
+  const a = normalize(awayTeam);
+
+  // Get all non-completed matches
+  const allMatches = await dbAll("SELECT id, status, homeTeam, awayTeam FROM Match WHERE status != 'completed'");
+  
+  // Try to find a match
+  for (const m of allMatches) {
+    const mh = normalize(m.homeTeam);
+    const ma = normalize(m.awayTeam);
+    if (mh === h && ma === a) return m;
+    // Partial match on first word
+    if (h.startsWith(mh.split(' ')[0]) && a.startsWith(ma.split(' ')[0])) return m;
+    if (mh.startsWith(h.split(' ')[0]) && ma.startsWith(a.split(' ')[0])) return m;
+  }
+  
+  // Also check completed matches for final score updates
+  const completed = await dbAll("SELECT id, status, homeTeam, awayTeam FROM Match");
+  for (const m of completed) {
+    const mh = normalize(m.homeTeam);
+    const ma = normalize(m.awayTeam);
+    if (mh === h && ma === a) return m;
+    if (h.startsWith(mh.split(' ')[0]) && a.startsWith(ma.split(' ')[0])) return m;
+    if (mh.startsWith(h.split(' ')[0]) && ma.startsWith(a.split(' ')[0])) return m;
+  }
+
+  return null;
 }
 
 async function scorePredictions(matchId: string, homeScore: number, awayScore: number): Promise<void> {

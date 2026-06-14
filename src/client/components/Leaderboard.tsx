@@ -93,9 +93,15 @@ export default function Leaderboard() {
         <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
           {/* Last match actual score banner */}
           {period === 'lastMatch' && lastMatch && (
-            <div className="bg-green-600 text-white px-4 py-3 text-center">
-              <p className="text-xs opacity-80">Actual Score</p>
-              <p className="text-lg font-bold">{lastMatch.homeTeam} {lastMatch.homeScore} - {lastMatch.awayScore} {lastMatch.awayTeam}</p>
+            <div className={`${lastMatch.status === 'live' ? 'bg-red-600' : 'bg-green-600'} text-white px-4 py-3 text-center`}>
+              {lastMatch.status === 'live' && (
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  <span className="w-2 h-2 rounded-full bg-white animate-live-pulse"></span>
+                  <span className="text-xs font-medium">LIVE — Score may update with 2-5 min lag</span>
+                </div>
+              )}
+              {lastMatch.status === 'completed' && <p className="text-xs opacity-80">Final Score</p>}
+              <p className="text-lg font-bold">{lastMatch.homeTeam} {lastMatch.homeScore ?? 0} - {lastMatch.awayScore ?? 0} {lastMatch.awayTeam}</p>
             </div>
           )}
           <table className="w-full text-sm">

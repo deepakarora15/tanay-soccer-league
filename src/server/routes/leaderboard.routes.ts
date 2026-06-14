@@ -19,14 +19,16 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
       dateFilter = ` AND m.resultConfirmedAt >= '${weekAgo}'`;
     } else if (period === 'lastMatch') {
-      // Get the most recently completed match
-      const lastMatch = await dbAll("SELECT id, homeTeam, awayTeam, homeScore, awayScore FROM Match WHERE status = 'completed' ORDER BY resultConfirmedAt DESC LIMIT 1");
+      // Show live match if one exists, otherwise most recently completed match
+      let lastMatch = await dbAll("SELECT id, homeTeam, awayTeam, homeScore, awayScore, status FROM Match WHERE status = 'live' ORDER BY scheduledAt DESC LIMIT 1");
+      if (lastMatch.length === 0) {
+        lastMatch = await dbAll("SELECT id, homeTeam, awayTeam, homeScore, awayScore, status FROM Match WHERE status = 'completed' ORDER BY resultConfirmedAt DESC LIMIT 1");
+      }
       if (lastMatch.length > 0) {
         dateFilter = ` AND p.matchId = '${lastMatch[0].id}'`;
-        // We'll attach match info and predictions to the response
         (req as any).lastMatchInfo = lastMatch[0];
       } else {
-        res.json({ entries: [], currentPlayer: { rank: 1, playerId, displayName: 'You', totalPoints: 0, accuracy: null, exactPredictions: 0, correctOutcomes: 0 } });
+        res.json({ entries: [], currentPlayer: { rank: 1, playerId, displayName: 'You', totalPoints: 0, accuracy: null, exactPredictions: 0, correctOutcomes: 0 }, lastMatch: null });
         return;
       }
     }
@@ -110,6 +112,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         awayTeam: matchInfo.awayTeam,
         homeScore: matchInfo.homeScore,
         awayScore: matchInfo.awayScore,
+        status: matchInfo.status,
       };
     }
 

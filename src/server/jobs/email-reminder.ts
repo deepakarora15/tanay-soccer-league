@@ -82,8 +82,8 @@ async function sendReminders(): Promise<void> {
 }
 
 export function startEmailReminder(): cron.ScheduledTask {
-  // Run daily at 8 AM UTC (1:30 PM IST)
-  return cron.schedule('0 8 * * *', async () => {
+  // Run daily at 3:30 AM UTC (9:00 AM IST)
+  return cron.schedule('30 3 * * *', async () => {
     await sendReminders();
   });
 }

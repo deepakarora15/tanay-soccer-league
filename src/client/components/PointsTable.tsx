@@ -60,37 +60,33 @@ export default function PointsTable() {
             <div key={group} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="bg-green-600 text-white px-4 py-2 font-semibold text-sm">{group}</div>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm table-fixed">
+                <table className="w-full text-xs sm:text-sm table-fixed">
                   <thead className="bg-gray-50 dark:bg-gray-700">
                     <tr>
-                      <th className="text-left pl-4 pr-2 py-2.5 font-semibold text-gray-600 dark:text-gray-300 w-[180px]">Team</th>
-                      <th className="text-center py-2.5 font-semibold text-gray-600 dark:text-gray-300 w-[40px]">P</th>
-                      <th className="text-center py-2.5 font-semibold text-gray-600 dark:text-gray-300 w-[40px]">W</th>
-                      <th className="text-center py-2.5 font-semibold text-gray-600 dark:text-gray-300 w-[40px]">D</th>
-                      <th className="text-center py-2.5 font-semibold text-gray-600 dark:text-gray-300 w-[40px]">L</th>
-                      <th className="text-center py-2.5 font-semibold text-gray-600 dark:text-gray-300 w-[40px]">GF</th>
-                      <th className="text-center py-2.5 font-semibold text-gray-600 dark:text-gray-300 w-[40px]">GA</th>
-                      <th className="text-center py-2.5 font-semibold text-gray-600 dark:text-gray-300 w-[44px]">GD</th>
-                      <th className="text-center py-2.5 font-bold text-gray-800 dark:text-gray-100 w-[44px]">Pts</th>
+                      <th className="text-left pl-3 pr-1 py-2 font-semibold text-gray-600 dark:text-gray-300 w-[110px] sm:w-[180px]">Team</th>
+                      <th className="text-center py-2 font-semibold text-gray-600 dark:text-gray-300 w-[24px] sm:w-[40px]">P</th>
+                      <th className="text-center py-2 font-semibold text-gray-600 dark:text-gray-300 w-[24px] sm:w-[40px]">W</th>
+                      <th className="text-center py-2 font-semibold text-gray-600 dark:text-gray-300 w-[24px] sm:w-[40px]">D</th>
+                      <th className="text-center py-2 font-semibold text-gray-600 dark:text-gray-300 w-[24px] sm:w-[40px]">L</th>
+                      <th className="text-center py-2 font-semibold text-gray-600 dark:text-gray-300 w-[28px] sm:w-[44px]">GD</th>
+                      <th className="text-center py-2 font-bold text-gray-800 dark:text-gray-100 w-[28px] sm:w-[44px]">Pts</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                     {standings[group].map((team, i) => (
                       <tr key={team.team} className={i < 2 ? 'bg-green-50 dark:bg-green-900/10' : ''}>
-                        <td className="pl-4 pr-2 py-2.5 font-medium text-gray-900 dark:text-white truncate">
-                          {i < 2 && <span className="text-green-500 mr-1">●</span>}
+                        <td className="pl-3 pr-1 py-2 font-medium text-gray-900 dark:text-white truncate">
+                          {i < 2 && <span className="text-green-500 mr-0.5">●</span>}
                           {team.team}
                         </td>
-                        <td className="text-center py-2.5 text-gray-700 dark:text-gray-300">{team.played}</td>
-                        <td className="text-center py-2.5 text-gray-700 dark:text-gray-300">{team.won}</td>
-                        <td className="text-center py-2.5 text-gray-700 dark:text-gray-300">{team.drawn}</td>
-                        <td className="text-center py-2.5 text-gray-700 dark:text-gray-300">{team.lost}</td>
-                        <td className="text-center py-2.5 text-gray-700 dark:text-gray-300">{team.goalsFor}</td>
-                        <td className="text-center py-2.5 text-gray-700 dark:text-gray-300">{team.goalsAgainst}</td>
-                        <td className="text-center py-2.5 text-gray-700 dark:text-gray-300">
+                        <td className="text-center py-2 text-gray-700 dark:text-gray-300">{team.played}</td>
+                        <td className="text-center py-2 text-gray-700 dark:text-gray-300">{team.won}</td>
+                        <td className="text-center py-2 text-gray-700 dark:text-gray-300">{team.drawn}</td>
+                        <td className="text-center py-2 text-gray-700 dark:text-gray-300">{team.lost}</td>
+                        <td className="text-center py-2 text-gray-700 dark:text-gray-300">
                           {team.goalDifference > 0 ? '+' : ''}{team.goalDifference}
                         </td>
-                        <td className="text-center py-2.5 font-bold text-gray-900 dark:text-white">{team.points}</td>
+                        <td className="text-center py-2 font-bold text-gray-900 dark:text-white">{team.points}</td>
                       </tr>
                     ))}
                   </tbody>

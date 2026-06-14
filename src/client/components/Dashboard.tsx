@@ -73,6 +73,9 @@ export default function Dashboard() {
         </div>
       </button>
 
+      {/* Auto-nudge: upcoming matches without prediction */}
+      <UpcomingNudge navigate={navigate} />
+
       <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h2>
 
       {/* Stats Grid */}
@@ -165,6 +168,58 @@ function StatCard({ label, value, icon, color }: { label: string; value: string 
       <div className="mt-2">
         <p className="text-2xl font-bold">{value}</p>
         <p className="text-xs opacity-90">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function UpcomingNudge({ navigate }: { navigate: (path: string) => void }) {
+  const { apiCall } = useApi();
+  const [unpredicted, setUnpredicted] = useState<any[]>([]);
+
+  useEffect(() => {
+    Promise.all([
+      apiCall<any[]>('/api/matches/upcoming').catch(() => []),
+      apiCall<any[]>('/api/predictions/my').catch(() => []),
+    ]).then(([matches, predictions]) => {
+      const predictedMatchIds = new Set((predictions || []).map((p: any) => p.matchId));
+      // Show matches in next 48 hours that user hasn't predicted
+      const now = Date.now();
+      const soon = matches.filter((m: any) => {
+        const matchTime = new Date(m.scheduledAt).getTime();
+        return matchTime - now < 48 * 60 * 60 * 1000 && matchTime > now && !predictedMatchIds.has(m.id);
+      });
+      setUnpredicted(soon);
+    });
+  }, []);
+
+  if (unpredicted.length === 0) return null;
+
+  return (
+    <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-xl p-4">
+      <div className="flex items-start gap-3">
+        <span className="text-2xl">⏰</span>
+        <div className="flex-1">
+          <p className="font-semibold text-orange-800 dark:text-orange-200">
+            {unpredicted.length} match{unpredicted.length > 1 ? 'es' : ''} starting soon without your prediction!
+          </p>
+          <div className="mt-2 space-y-1">
+            {unpredicted.slice(0, 3).map((m: any) => (
+              <p key={m.id} className="text-sm text-orange-700 dark:text-orange-300">
+                • {m.homeTeam} vs {m.awayTeam} — {new Date(m.scheduledAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </p>
+            ))}
+            {unpredicted.length > 3 && (
+              <p className="text-xs text-orange-500">+{unpredicted.length - 3} more</p>
+            )}
+          </div>
+          <button
+            onClick={() => navigate('/predictions')}
+            className="mt-3 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            Predict Now →
+          </button>
+        </div>
       </div>
     </div>
   );

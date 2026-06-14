@@ -58,4 +58,42 @@ router.get('/all-predictions', requireAdmin, async (req: Request, res: Response)
   }
 });
 
+/**
+ * GET /members — all registered users with stats
+ */
+router.get('/members', requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const members = await dbAll(
+      `SELECT u.id, u.email, u.displayName, u.role, u.status, u.createdAt,
+              COUNT(p.id) as totalPredictions
+       FROM User u
+       LEFT JOIN Prediction p ON u.id = p.playerId
+       GROUP BY u.id
+       ORDER BY u.createdAt DESC`
+    );
+    res.json(members);
+  } catch (error: any) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /match-stats — prediction count per match
+ */
+router.get('/match-stats', requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const stats = await dbAll(
+      `SELECT m.id, m.homeTeam, m.awayTeam, m.scheduledAt, m.status, m.groupName,
+              COUNT(p.id) as predictionCount
+       FROM Match m
+       LEFT JOIN Prediction p ON m.id = p.matchId
+       GROUP BY m.id
+       ORDER BY m.scheduledAt ASC`
+    );
+    res.json(stats);
+  } catch (error: any) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

@@ -164,7 +164,88 @@ export default function AdminPanel() {
       </div>
 
       {/* Player Predictions */}
+      <MembersList />
+      <MatchStats />
       <PlayerPredictions />
+    </div>
+  );
+}
+
+function MembersList() {
+  const { apiCall } = useApi();
+  const [members, setMembers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiCall<any[]>('/api/admin/members')
+      .then(setMembers)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return null;
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+        👥 Registered Users <span className="text-sm font-normal text-gray-400">({members.length})</span>
+      </h3>
+      <div className="space-y-2">
+        {members.map((m: any) => (
+          <div key={m.id} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
+            <div>
+              <p className="font-medium text-gray-900 dark:text-white text-sm">{m.displayName}</p>
+              <p className="text-xs text-gray-400">{m.email}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-bold text-blue-600 dark:text-blue-400">{m.totalPredictions} predictions</p>
+              <p className="text-xs text-gray-400">{new Date(m.createdAt).toLocaleDateString()}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MatchStats() {
+  const { apiCall } = useApi();
+  const [stats, setStats] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
+
+  useEffect(() => {
+    apiCall<any[]>('/api/admin/match-stats')
+      .then(setStats)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return null;
+
+  const displayed = showAll ? stats : stats.filter((s: any) => s.status === 'upcoming').slice(0, 5);
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">📊 Predictions Per Match</h3>
+      <div className="space-y-2">
+        {displayed.map((s: any) => (
+          <div key={s.id} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">{s.homeTeam} vs {s.awayTeam}</p>
+              <p className="text-xs text-gray-400">{s.groupName} • {new Date(s.scheduledAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+            </div>
+            <span className={`text-sm font-bold px-2 py-1 rounded-full ${s.predictionCount > 0 ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-500'}`}>
+              {s.predictionCount} 🎯
+            </span>
+          </div>
+        ))}
+      </div>
+      {stats.length > 5 && (
+        <button onClick={() => setShowAll(!showAll)} className="mt-3 w-full py-2 text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+          {showAll ? '▲ Show less' : `▼ Show all ${stats.length} matches`}
+        </button>
+      )}
     </div>
   );
 }

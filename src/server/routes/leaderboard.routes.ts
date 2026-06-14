@@ -37,17 +37,33 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     const allUsers = await dbAll("SELECT id as playerId, displayName FROM User WHERE status = 'active'");
 
     // Get scores for the selected period
-    const scoredPlayers = await dbAll(
-      `SELECT p.playerId,
-              COALESCE(SUM(p.pointsAwarded), 0) as totalPoints,
-              COUNT(CASE WHEN p.pointsAwarded = 3 THEN 1 END) as exactPredictions,
-              COUNT(CASE WHEN p.pointsAwarded >= 1 THEN 1 END) as correctOutcomes,
-              COUNT(p.id) as scoredPredictions
-       FROM Prediction p
-       INNER JOIN Match m ON p.matchId = m.id
-       WHERE 1=1${dateFilter}
-       GROUP BY p.playerId`
-    );
+    let scoredPlayers;
+    if (period === 'lastMatch' && (req as any).lastMatchInfo) {
+      const matchId = (req as any).lastMatchInfo.id;
+      scoredPlayers = await dbAll(
+        `SELECT p.playerId,
+                COALESCE(SUM(p.pointsAwarded), 0) as totalPoints,
+                COUNT(CASE WHEN p.pointsAwarded = 3 THEN 1 END) as exactPredictions,
+                COUNT(CASE WHEN p.pointsAwarded >= 1 THEN 1 END) as correctOutcomes,
+                COUNT(p.id) as scoredPredictions
+         FROM Prediction p
+         WHERE p.matchId = ?
+         GROUP BY p.playerId`,
+        matchId
+      );
+    } else {
+      scoredPlayers = await dbAll(
+        `SELECT p.playerId,
+                COALESCE(SUM(p.pointsAwarded), 0) as totalPoints,
+                COUNT(CASE WHEN p.pointsAwarded = 3 THEN 1 END) as exactPredictions,
+                COUNT(CASE WHEN p.pointsAwarded >= 1 THEN 1 END) as correctOutcomes,
+                COUNT(p.id) as scoredPredictions
+         FROM Prediction p
+         INNER JOIN Match m ON p.matchId = m.id
+         WHERE 1=1${dateFilter}
+         GROUP BY p.playerId`
+      );
+    }
 
     const scoreMap: Record<string, any> = {};
     for (const s of scoredPlayers) {
@@ -91,19 +107,17 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       entries.push(currentPlayer);
     }
 
-    // For lastMatch period, include match info and each player's prediction
     let lastMatchData = null;
     if (period === 'lastMatch' && (req as any).lastMatchInfo) {
       const matchInfo = (req as any).lastMatchInfo;
       const predictions = await dbAll(
-        "SELECT p.playerId, p.predictedHomeScore, p.predictedAwayScore FROM Prediction WHERE matchId = ?",
+        "SELECT playerId, predictedHomeScore, predictedAwayScore FROM Prediction WHERE matchId = ?",
         matchInfo.id
       );
       const predMap: Record<string, { home: number; away: number }> = {};
       for (const p of predictions) {
         predMap[p.playerId] = { home: p.predictedHomeScore, away: p.predictedAwayScore };
       }
-      // Attach prediction to each entry
       entries.forEach((e: any) => {
         e.prediction = predMap[e.playerId] || null;
       });

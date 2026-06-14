@@ -177,7 +177,24 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       };
     }
 
-    res.json({ entries, currentPlayer, lastMatch: lastMatchData });
+    // Get matches for the period (for today/week views)
+    let periodMatches: any[] = [];
+    if (period === 'today') {
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+      const tomorrowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
+      periodMatches = await dbAll(
+        "SELECT id, homeTeam, awayTeam, homeScore, awayScore, status, scheduledAt, groupName FROM Match WHERE scheduledAt >= ? AND scheduledAt < ? ORDER BY scheduledAt ASC",
+        todayStart, tomorrowStart
+      );
+    } else if (period === 'week') {
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      periodMatches = await dbAll(
+        "SELECT id, homeTeam, awayTeam, homeScore, awayScore, status, scheduledAt, groupName FROM Match WHERE scheduledAt >= ? ORDER BY scheduledAt DESC",
+        weekAgo
+      );
+    }
+
+    res.json({ entries, currentPlayer, lastMatch: lastMatchData, matches: periodMatches });
   } catch (error: any) {
     console.error('Leaderboard error:', error.message);
     res.status(500).json({ error: 'Internal server error' });

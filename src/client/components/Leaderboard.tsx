@@ -30,16 +30,29 @@ export default function Leaderboard() {
   const { user } = useAuth();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [lastMatch, setLastMatch] = useState<any>(null);
+  const [periodMatches, setPeriodMatches] = useState<any[]>([]);
+  const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
+  const [matchPredictions, setMatchPredictions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<Period>('lastMatch');
 
   useEffect(() => {
     setLoading(true);
-    apiCall<LeaderboardResponse>(`/api/leaderboard?period=${period}`)
-      .then((data) => { setEntries(data.entries || []); setLastMatch(data.lastMatch || null); })
+    setExpandedMatch(null);
+    apiCall<any>(`/api/leaderboard?period=${period}`)
+      .then((data) => { setEntries(data.entries || []); setLastMatch(data.lastMatch || null); setPeriodMatches(data.matches || []); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [period]);
+
+  const viewMatchPredictions = async (matchId: string) => {
+    if (expandedMatch === matchId) { setExpandedMatch(null); return; }
+    setExpandedMatch(matchId);
+    try {
+      const data = await apiCall<any>(`/api/match-predictions/${matchId}/predictions`);
+      setMatchPredictions(data.predictions || []);
+    } catch { setMatchPredictions([]); }
+  };
 
   const getRankIcon = (rank: number, points: number) => {
     if (points === 0) return `${rank}`;
@@ -143,6 +156,67 @@ export default function Leaderboard() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Match-by-match breakdown for Today/This Week */}
+      {(period === 'today' || period === 'week') && periodMatches.length > 0 && (
+        <div className="mt-4">
+          <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Matches</h3>
+          <div className="space-y-2">
+            {periodMatches.map((m: any) => {
+              const isPlayable = m.status === 'completed' || m.status === 'live';
+              const isExpanded = expandedMatch === m.id;
+              return (
+                <div key={m.id}>
+                  <button
+                    onClick={() => isPlayable ? viewMatchPredictions(m.id) : null}
+                    disabled={!isPlayable}
+                    className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                      !isPlayable
+                        ? 'border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30 opacity-50 cursor-default'
+                        : isExpanded
+                        ? 'border-blue-400 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-blue-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm text-gray-900 dark:text-white">
+                        {m.homeTeam} {m.status !== 'upcoming' ? `${m.homeScore ?? 0} - ${m.awayScore ?? 0}` : 'vs'} {m.awayTeam}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {m.status === 'live' && <span className="text-xs text-red-500 font-medium">LIVE</span>}
+                        {m.status === 'completed' && <span className="text-xs text-green-500">FT</span>}
+                        {m.status === 'upcoming' && <span className="text-xs text-gray-400">{new Date(m.scheduledAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>}
+                        {isPlayable && <span className="text-gray-400 text-xs">{isExpanded ? '▲' : '▼'}</span>}
+                      </div>
+                    </div>
+                  </button>
+                  {isExpanded && (
+                    <div className="ml-2 mr-2 mt-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 space-y-1">
+                      {matchPredictions.length === 0 ? (
+                        <p className="text-sm text-gray-400 text-center">No predictions for this match</p>
+                      ) : matchPredictions.map((p: any, i: number) => (
+                        <div key={i} className="flex items-center justify-between text-sm py-1">
+                          <span className="text-gray-800 dark:text-gray-200">{p.displayName}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-gray-900 dark:text-white">{p.predictedHomeScore} - {p.predictedAwayScore}</span>
+                            {p.pointsAwarded !== null && (
+                              <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
+                                p.pointsAwarded === 3 ? 'bg-green-100 dark:bg-green-900/40 text-green-700' :
+                                p.pointsAwarded === 1 ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700' :
+                                'bg-gray-100 dark:bg-gray-700 text-gray-500'
+                              }`}>+{p.pointsAwarded}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

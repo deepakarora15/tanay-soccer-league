@@ -57,6 +57,20 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Predict CTA Banner */}
+      <a
+        href="/predictions"
+        className="block bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 rounded-2xl p-5 text-white shadow-lg hover:shadow-xl transition-shadow"
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-2xl font-extrabold">🎯 Predict Scores Now!</p>
+            <p className="text-green-100 text-sm mt-1">Matches are live. Submit your predictions before kick-off!</p>
+          </div>
+          <span className="text-4xl">▶</span>
+        </div>
+      </a>
+
       <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h2>
 
       {/* Stats Grid */}

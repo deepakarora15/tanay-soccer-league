@@ -48,10 +48,10 @@ export default function Leaderboard() {
       {/* Period Filter */}
       <div className="flex gap-2 overflow-x-auto pb-1">
         {([
-          { key: 'overall', label: 'Overall' },
-          { key: 'week', label: 'This Week' },
-          { key: 'today', label: 'Today' },
           { key: 'lastMatch', label: 'Last Match' },
+          { key: 'today', label: 'Today' },
+          { key: 'week', label: 'This Week' },
+          { key: 'overall', label: 'Overall' },
         ] as { key: Period; label: string }[]).map((p) => (
           <button
             key={p.key}

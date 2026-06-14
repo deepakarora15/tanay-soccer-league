@@ -38,9 +38,8 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
        FROM User u
        INNER JOIN Prediction p ON u.id = p.playerId
        INNER JOIN Match m ON p.matchId = m.id
-       WHERE u.status = 'active' AND p.pointsAwarded IS NOT NULL${dateFilter}
+       WHERE u.status = 'active'${dateFilter}
        GROUP BY u.id, u.displayName
-       HAVING totalPoints > 0 OR COUNT(p.id) > 0
        ORDER BY totalPoints DESC, exactPredictions DESC, correctOutcomes DESC`
     );
 

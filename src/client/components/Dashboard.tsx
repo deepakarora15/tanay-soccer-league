@@ -134,10 +134,22 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {data.recentPredictions.map((pred) => (
-                  <tr key={pred.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
+                {[...data.recentPredictions]
+                  .sort((a, b) => {
+                    // Completed (has actual score) first, then upcoming
+                    const aCompleted = a.actualHomeScore !== null ? 0 : 1;
+                    const bCompleted = b.actualHomeScore !== null ? 0 : 1;
+                    if (aCompleted !== bCompleted) return aCompleted - bCompleted;
+                    // Within completed: most recent first. Within upcoming: soonest first.
+                    return aCompleted === 0
+                      ? b.submittedAt.localeCompare(a.submittedAt)
+                      : a.submittedAt.localeCompare(b.submittedAt);
+                  })
+                  .map((pred) => (
+                  <tr key={pred.id} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 ${pred.actualHomeScore !== null ? '' : 'opacity-70'}`}>
+                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 text-xs sm:text-sm">
                       {pred.homeTeam} vs {pred.awayTeam}
+                      {pred.actualHomeScore === null && <span className="ml-1 text-xs text-blue-500">⏳</span>}
                     </td>
                     <td className="text-center px-4 py-3 text-gray-700 dark:text-gray-300">
                       {pred.predictedHomeScore} - {pred.predictedAwayScore}
@@ -147,11 +159,15 @@ export default function Dashboard() {
                     </td>
                     <td className="text-center px-4 py-3">
                       {pred.pointsAwarded !== null ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                          pred.pointsAwarded === 3 ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300' :
+                          pred.pointsAwarded === 1 ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-300' :
+                          'bg-gray-100 dark:bg-gray-700 text-gray-500'
+                        }`}>
                           +{pred.pointsAwarded}
                         </span>
                       ) : (
-                        <span className="text-gray-400">—</span>
+                        <span className="text-gray-400 text-xs">pending</span>
                       )}
                     </td>
                   </tr>
@@ -271,6 +287,7 @@ function LiveScoresWidget() {
 function TodaysMatches() {
   const { apiCall } = useApi();
   const [matches, setMatches] = useState<any[]>([]);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -278,15 +295,10 @@ function TodaysMatches() {
       apiCall<any[]>('/api/matches/completed').catch(() => []),
       apiCall<any[]>('/api/matches/upcoming').catch(() => []),
     ]).then(([live, completed, upcoming]) => {
-      // Get today's date
       const today = new Date().toISOString().split('T')[0];
-
-      // Filter to today's matches
       const todayLive = live.filter((m: any) => m.scheduledAt.startsWith(today));
       const todayCompleted = completed.filter((m: any) => m.scheduledAt.startsWith(today));
       const todayUpcoming = upcoming.filter((m: any) => m.scheduledAt.startsWith(today));
-
-      // Order: live first, then completed, then upcoming
       setMatches([...todayLive, ...todayCompleted, ...todayUpcoming]);
     });
   }, []);
@@ -294,34 +306,36 @@ function TodaysMatches() {
   if (matches.length === 0) return null;
 
   return (
-    <div>
-      <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Today's Matches</h3>
-      <div className="space-y-2">
-        {matches.map((m: any) => (
-          <div key={m.id} className={`flex items-center justify-between p-3 rounded-lg border ${
-            m.status === 'live' ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800' :
-            m.status === 'completed' ? 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700' :
-            'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
-          }`}>
-            <span className="font-medium text-gray-900 dark:text-white text-sm flex-1">{m.homeTeam}</span>
-            <div className="text-center px-3">
-              {m.status === 'live' && (
-                <span className="text-xs text-red-500 block animate-live-pulse">LIVE{m.matchMinute ? ` ${m.matchMinute}'` : ''}</span>
-              )}
-              {m.status === 'completed' && <span className="text-xs text-gray-400 block">FT</span>}
-              {m.status === 'upcoming' && (
-                <span className="text-xs text-blue-500 block">
-                  {new Date(m.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+      >
+        <span className="font-semibold text-gray-800 dark:text-gray-200 text-sm">📅 Today's Matches ({matches.length})</span>
+        <span className="text-gray-400">{expanded ? '▲' : '▼'}</span>
+      </button>
+      {expanded && (
+        <div className="px-4 pb-3 space-y-2">
+          {matches.map((m: any) => (
+            <div key={m.id} className={`flex items-center justify-between p-2.5 rounded-lg border ${
+              m.status === 'live' ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800' :
+              m.status === 'completed' ? 'bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-700' :
+              'border-gray-100 dark:border-gray-700'
+            }`}>
+              <span className="font-medium text-gray-900 dark:text-white text-xs flex-1">{m.homeTeam}</span>
+              <div className="text-center px-2">
+                {m.status === 'live' && <span className="text-[10px] text-red-500 block animate-live-pulse">LIVE{m.matchMinute ? ` ${m.matchMinute}'` : ''}</span>}
+                {m.status === 'completed' && <span className="text-[10px] text-gray-400 block">FT</span>}
+                {m.status === 'upcoming' && <span className="text-[10px] text-blue-500 block">{new Date(m.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+                <span className={`font-bold text-sm ${m.status === 'live' ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
+                  {m.homeScore ?? '-'} - {m.awayScore ?? '-'}
                 </span>
-              )}
-              <span className={`font-bold ${m.status === 'live' ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
-                {m.homeScore ?? '-'} - {m.awayScore ?? '-'}
-              </span>
+              </div>
+              <span className="font-medium text-gray-900 dark:text-white text-xs flex-1 text-right">{m.awayTeam}</span>
             </div>
-            <span className="font-medium text-gray-900 dark:text-white text-sm flex-1 text-right">{m.awayTeam}</span>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

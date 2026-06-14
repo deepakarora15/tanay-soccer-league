@@ -46,6 +46,9 @@ export async function bootstrapAdmin(): Promise<void> {
   if (matchCount.length === 0) {
     await seedMatches();
     console.log('[bootstrap] Matches seeded');
+  } else {
+    // Update results for matches that have been played
+    await updateResults();
   }
 
   // Seed news if not exists
@@ -108,6 +111,27 @@ async function seedNews(): Promise<void> {
     await dbRun(
       'INSERT OR IGNORE INTO NewsArticle (id, headline, summary, sourceUrl, sourceAttribution, publishedAt, cachedAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
       a.id, a.headline, a.summary, a.url, a.source, a.date, now
+    );
+  }
+}
+
+async function updateResults(): Promise<void> {
+  // Actual results from the World Cup (sourced from ESPN, BBC, etc.)
+  const results = [
+    { id: 'match-001', hs: 2, as: 0 },  // Mexico 2-0 South Africa
+    { id: 'match-002', hs: 2, as: 1 },  // South Korea 2-1 Czechia
+    { id: 'match-003', hs: 1, as: 1 },  // Canada 1-1 Bosnia
+    { id: 'match-004', hs: 4, as: 1 },  // USA 4-1 Paraguay
+    { id: 'match-005', hs: 1, as: 1 },  // Qatar 1-1 Switzerland
+    { id: 'match-006', hs: 1, as: 1 },  // Brazil 1-1 Morocco
+    { id: 'match-007', hs: 0, as: 1 },  // Haiti 0-1 Scotland
+    { id: 'match-008', hs: 2, as: 0 },  // Australia 2-0 Turkiye
+  ];
+
+  for (const r of results) {
+    await dbRun(
+      "UPDATE Match SET homeScore = ?, awayScore = ?, status = 'completed', predictionsLocked = 1, resultConfirmedAt = ? WHERE id = ? AND status != 'completed'",
+      r.hs, r.as, new Date().toISOString(), r.id
     );
   }
 }

@@ -64,8 +64,17 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       };
     }).sort((a: any, b: any) => b.totalPoints - a.totalPoints || b.exactPredictions - a.exactPredictions);
 
-    // Assign ranks
-    entries.forEach((e: any, i: number) => { e.rank = i + 1; });
+    // Assign ranks — players with equal points share the same rank
+    let currentRank = 1;
+    entries.forEach((e: any, i: number) => {
+      if (i === 0) {
+        e.rank = 1;
+      } else if (e.totalPoints === entries[i - 1].totalPoints) {
+        e.rank = entries[i - 1].rank; // same rank as previous
+      } else {
+        e.rank = i + 1;
+      }
+    });
 
     // If current player not in list, add them
     const currentPlayer = entries.find((e: any) => e.playerId === playerId) || {

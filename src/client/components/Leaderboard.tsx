@@ -34,7 +34,8 @@ export default function Leaderboard() {
       .finally(() => setLoading(false));
   }, [period]);
 
-  const getRankIcon = (rank: number) => {
+  const getRankIcon = (rank: number, points: number) => {
+    if (points === 0) return `${rank}`;
     if (rank === 1) return '🏆';
     if (rank === 2) return '🥈';
     if (rank === 3) return '🥉';
@@ -101,8 +102,8 @@ export default function Leaderboard() {
                     className={isCurrentUser ? 'bg-green-50 dark:bg-green-900/20 font-semibold' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}
                   >
                     <td className="px-3 py-3">
-                      <span className={entry.rank <= 3 ? 'text-xl' : 'text-gray-600 dark:text-gray-400'}>
-                        {getRankIcon(entry.rank)}
+                      <span className={entry.rank <= 3 && entry.totalPoints > 0 ? 'text-xl' : 'text-gray-600 dark:text-gray-400'}>
+                        {getRankIcon(entry.rank, entry.totalPoints)}
                       </span>
                     </td>
                     <td className="px-3 py-3 text-gray-900 dark:text-gray-100">

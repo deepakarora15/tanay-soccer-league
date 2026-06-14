@@ -43,6 +43,7 @@ export default function FavoritesManager() {
   const [teamSearch, setTeamSearch] = useState('');
   const [playerSearch, setPlayerSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [saveMsg, setSaveMsg] = useState('');
 
   useEffect(() => {
     apiCall<{ teams: Favorite[]; players: Favorite[] }>('/api/favorites')
@@ -67,8 +68,11 @@ export default function FavoritesManager() {
       });
       setTeams(prev => [...prev, { id: result.id, entityName: name, entityId: name.toLowerCase().replace(/\s+/g, '-'), type: 'team', playerId: '' }]);
       setTeamSearch('');
+      setSaveMsg('✓ ' + name + ' saved!');
+      setTimeout(() => setSaveMsg(''), 2000);
     } catch (e: any) {
-      console.error('Add team failed:', e.message);
+      setSaveMsg('❌ Failed to save');
+      setTimeout(() => setSaveMsg(''), 2000);
     }
   };
 
@@ -80,8 +84,11 @@ export default function FavoritesManager() {
       });
       setPlayers(prev => [...prev, { id: result.id, entityName: name, entityId: name.toLowerCase().replace(/\s+/g, '-'), type: 'player', playerId: '' }]);
       setPlayerSearch('');
+      setSaveMsg('✓ ' + name + ' saved!');
+      setTimeout(() => setSaveMsg(''), 2000);
     } catch (e: any) {
-      console.error('Add player failed:', e.message);
+      setSaveMsg('❌ Failed to save');
+      setTimeout(() => setSaveMsg(''), 2000);
     }
   };
 
@@ -90,6 +97,8 @@ export default function FavoritesManager() {
       await apiCall(`/api/favorites/${id}`, { method: 'DELETE' });
       if (type === 'team') setTeams(prev => prev.filter(f => f.id !== id));
       else setPlayers(prev => prev.filter(f => f.id !== id));
+      setSaveMsg('✓ Removed');
+      setTimeout(() => setSaveMsg(''), 2000);
     } catch {}
   };
 
@@ -100,6 +109,12 @@ export default function FavoritesManager() {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900 dark:text-white">⭐ My Favorites</h2>
+
+      {saveMsg && (
+        <div className={`px-4 py-2 rounded-lg text-sm font-medium text-center animate-success-flash ${saveMsg.startsWith('✓') ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'}`}>
+          {saveMsg}
+        </div>
+      )}
 
       {/* Teams Section */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">

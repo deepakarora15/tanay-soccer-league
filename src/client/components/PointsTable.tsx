@@ -31,8 +31,10 @@ export default function PointsTable() {
   useEffect(() => {
     Promise.all([
       apiCall<Match[]>('/api/matches/completed').catch(() => []),
-    ]).then(([completed]) => {
-      const groupStandings = calculateStandings(completed);
+      apiCall<Match[]>('/api/matches/upcoming').catch(() => []),
+    ]).then(([completed, upcoming]) => {
+      const allMatches = [...completed, ...upcoming];
+      const groupStandings = calculateStandings(completed, allMatches);
       setStandings(groupStandings);
     }).finally(() => setLoading(false));
   }, []);
@@ -106,20 +108,27 @@ export default function PointsTable() {
   );
 }
 
-function calculateStandings(matches: Match[]): Record<string, TeamStanding[]> {
+function calculateStandings(completedMatches: Match[], allMatches: Match[]): Record<string, TeamStanding[]> {
   const groups: Record<string, Record<string, TeamStanding>> = {};
 
-  for (const match of matches) {
-    if (!match.groupName || match.homeScore === null || match.awayScore === null) continue;
-
+  // First, register all teams from all matches (including upcoming)
+  for (const match of allMatches) {
+    if (!match.groupName) continue;
     if (!groups[match.groupName]) groups[match.groupName] = {};
-
     const g = groups[match.groupName];
     if (!g[match.homeTeam]) g[match.homeTeam] = { team: match.homeTeam, played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 };
     if (!g[match.awayTeam]) g[match.awayTeam] = { team: match.awayTeam, played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0 };
+  }
 
+  // Then calculate stats from completed matches only
+  for (const match of completedMatches) {
+    if (!match.groupName || match.homeScore === null || match.awayScore === null) continue;
+    if (!groups[match.groupName]) continue;
+
+    const g = groups[match.groupName];
     const home = g[match.homeTeam];
     const away = g[match.awayTeam];
+    if (!home || !away) continue;
 
     home.played++; away.played++;
     home.goalsFor += match.homeScore; home.goalsAgainst += match.awayScore;

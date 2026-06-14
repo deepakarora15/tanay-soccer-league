@@ -197,8 +197,8 @@ export default function Layout() {
           {[
             { to: '/', icon: '📊', label: 'Home' },
             { to: '/predictions', icon: '🎯', label: 'Predict' },
+            { to: '/schedule', icon: '📅', label: 'Schedule' },
             { to: '/scores', icon: '📺', label: 'Results' },
-            { to: '/points-table', icon: '📋', label: 'Table' },
             { to: '/leaderboard', icon: '🏆', label: 'Ranks' },
           ].map((tab) => (
             <NavLink

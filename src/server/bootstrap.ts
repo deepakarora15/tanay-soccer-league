@@ -47,9 +47,15 @@ export async function bootstrapAdmin(): Promise<void> {
     await seedMatches();
     console.log('[bootstrap] Matches seeded');
   } else {
+    // Ensure all 72 matches exist (add missing ones)
+    await seedMatches();
     // Update results for matches that have been played
     await updateResults();
   }
+
+  // Clean up test users
+  await dbRun("DELETE FROM User WHERE email IN ('testpersist@test.com', 'check123@test.com')");
+  await dbRun("DELETE FROM User WHERE email LIKE '%test.com' AND email != 'admin@league.com'");
 
   // Seed news if not exists
   const newsCount = await dbAll('SELECT id FROM NewsArticle LIMIT 1');
@@ -61,14 +67,15 @@ export async function bootstrapAdmin(): Promise<void> {
 
 async function seedMatches(): Promise<void> {
   const matches = [
+    // Matchday 1
     { id: 'match-001', home: 'Mexico', away: 'South Africa', time: '2026-06-11T19:00:00Z', group: 'Group A', status: 'completed', hs: 2, as: 0 },
     { id: 'match-002', home: 'South Korea', away: 'Czechia', time: '2026-06-12T02:00:00Z', group: 'Group A', status: 'completed', hs: 2, as: 1 },
     { id: 'match-003', home: 'Canada', away: 'Bosnia and Herzegovina', time: '2026-06-12T19:00:00Z', group: 'Group B', status: 'completed', hs: 1, as: 1 },
     { id: 'match-004', home: 'USA', away: 'Paraguay', time: '2026-06-13T01:00:00Z', group: 'Group D', status: 'completed', hs: 4, as: 1 },
-    { id: 'match-005', home: 'Qatar', away: 'Switzerland', time: '2026-06-13T19:00:00Z', group: 'Group B', status: 'upcoming', hs: null, as: null },
-    { id: 'match-006', home: 'Brazil', away: 'Morocco', time: '2026-06-13T22:00:00Z', group: 'Group C', status: 'upcoming', hs: null, as: null },
-    { id: 'match-007', home: 'Haiti', away: 'Scotland', time: '2026-06-14T01:00:00Z', group: 'Group C', status: 'upcoming', hs: null, as: null },
-    { id: 'match-008', home: 'Australia', away: 'Turkiye', time: '2026-06-14T04:00:00Z', group: 'Group D', status: 'upcoming', hs: null, as: null },
+    { id: 'match-005', home: 'Qatar', away: 'Switzerland', time: '2026-06-13T19:00:00Z', group: 'Group B', status: 'completed', hs: 1, as: 1 },
+    { id: 'match-006', home: 'Brazil', away: 'Morocco', time: '2026-06-13T22:00:00Z', group: 'Group C', status: 'completed', hs: 1, as: 1 },
+    { id: 'match-007', home: 'Haiti', away: 'Scotland', time: '2026-06-14T01:00:00Z', group: 'Group C', status: 'completed', hs: 0, as: 1 },
+    { id: 'match-008', home: 'Australia', away: 'Turkiye', time: '2026-06-14T04:00:00Z', group: 'Group D', status: 'completed', hs: 2, as: 0 },
     { id: 'match-009', home: 'Germany', away: 'Curacao', time: '2026-06-14T17:00:00Z', group: 'Group E', status: 'upcoming', hs: null, as: null },
     { id: 'match-010', home: 'Netherlands', away: 'Japan', time: '2026-06-14T20:00:00Z', group: 'Group F', status: 'upcoming', hs: null, as: null },
     { id: 'match-011', home: 'Ivory Coast', away: 'Ecuador', time: '2026-06-14T23:00:00Z', group: 'Group E', status: 'upcoming', hs: null, as: null },
@@ -85,6 +92,56 @@ async function seedMatches(): Promise<void> {
     { id: 'match-022', home: 'England', away: 'Croatia', time: '2026-06-17T20:00:00Z', group: 'Group L', status: 'upcoming', hs: null, as: null },
     { id: 'match-023', home: 'Ghana', away: 'Panama', time: '2026-06-17T23:00:00Z', group: 'Group L', status: 'upcoming', hs: null, as: null },
     { id: 'match-024', home: 'Uzbekistan', away: 'Colombia', time: '2026-06-18T02:00:00Z', group: 'Group K', status: 'upcoming', hs: null, as: null },
+    // Matchday 2
+    { id: 'match-025', home: 'Czechia', away: 'South Africa', time: '2026-06-18T16:00:00Z', group: 'Group A', status: 'upcoming', hs: null, as: null },
+    { id: 'match-026', home: 'Switzerland', away: 'Bosnia and Herzegovina', time: '2026-06-18T19:00:00Z', group: 'Group B', status: 'upcoming', hs: null, as: null },
+    { id: 'match-027', home: 'Canada', away: 'Qatar', time: '2026-06-18T22:00:00Z', group: 'Group B', status: 'upcoming', hs: null, as: null },
+    { id: 'match-028', home: 'Mexico', away: 'South Korea', time: '2026-06-19T01:00:00Z', group: 'Group A', status: 'upcoming', hs: null, as: null },
+    { id: 'match-029', home: 'USA', away: 'Australia', time: '2026-06-19T19:00:00Z', group: 'Group D', status: 'upcoming', hs: null, as: null },
+    { id: 'match-030', home: 'Scotland', away: 'Morocco', time: '2026-06-19T22:00:00Z', group: 'Group C', status: 'upcoming', hs: null, as: null },
+    { id: 'match-031', home: 'Brazil', away: 'Haiti', time: '2026-06-20T00:30:00Z', group: 'Group C', status: 'upcoming', hs: null, as: null },
+    { id: 'match-032', home: 'Turkiye', away: 'Paraguay', time: '2026-06-20T03:00:00Z', group: 'Group D', status: 'upcoming', hs: null, as: null },
+    { id: 'match-033', home: 'Netherlands', away: 'Sweden', time: '2026-06-20T17:00:00Z', group: 'Group F', status: 'upcoming', hs: null, as: null },
+    { id: 'match-034', home: 'Germany', away: 'Ivory Coast', time: '2026-06-20T20:00:00Z', group: 'Group E', status: 'upcoming', hs: null, as: null },
+    { id: 'match-035', home: 'Ecuador', away: 'Curacao', time: '2026-06-21T03:00:00Z', group: 'Group E', status: 'upcoming', hs: null, as: null },
+    { id: 'match-036', home: 'Tunisia', away: 'Japan', time: '2026-06-21T04:00:00Z', group: 'Group F', status: 'upcoming', hs: null, as: null },
+    { id: 'match-037', home: 'Spain', away: 'Saudi Arabia', time: '2026-06-21T16:00:00Z', group: 'Group H', status: 'upcoming', hs: null, as: null },
+    { id: 'match-038', home: 'Belgium', away: 'Iran', time: '2026-06-21T19:00:00Z', group: 'Group G', status: 'upcoming', hs: null, as: null },
+    { id: 'match-039', home: 'Uruguay', away: 'Cape Verde', time: '2026-06-21T22:00:00Z', group: 'Group H', status: 'upcoming', hs: null, as: null },
+    { id: 'match-040', home: 'New Zealand', away: 'Egypt', time: '2026-06-22T01:00:00Z', group: 'Group G', status: 'upcoming', hs: null, as: null },
+    { id: 'match-041', home: 'Argentina', away: 'Austria', time: '2026-06-22T17:00:00Z', group: 'Group J', status: 'upcoming', hs: null, as: null },
+    { id: 'match-042', home: 'France', away: 'Iraq', time: '2026-06-22T21:00:00Z', group: 'Group I', status: 'upcoming', hs: null, as: null },
+    { id: 'match-043', home: 'Norway', away: 'Senegal', time: '2026-06-23T00:00:00Z', group: 'Group I', status: 'upcoming', hs: null, as: null },
+    { id: 'match-044', home: 'Jordan', away: 'Algeria', time: '2026-06-23T03:00:00Z', group: 'Group J', status: 'upcoming', hs: null, as: null },
+    { id: 'match-045', home: 'Portugal', away: 'Uzbekistan', time: '2026-06-23T17:00:00Z', group: 'Group K', status: 'upcoming', hs: null, as: null },
+    { id: 'match-046', home: 'England', away: 'Ghana', time: '2026-06-23T20:00:00Z', group: 'Group L', status: 'upcoming', hs: null, as: null },
+    { id: 'match-047', home: 'Panama', away: 'Croatia', time: '2026-06-23T23:00:00Z', group: 'Group L', status: 'upcoming', hs: null, as: null },
+    { id: 'match-048', home: 'Colombia', away: 'DR Congo', time: '2026-06-24T02:00:00Z', group: 'Group K', status: 'upcoming', hs: null, as: null },
+    // Matchday 3
+    { id: 'match-049', home: 'Switzerland', away: 'Canada', time: '2026-06-24T19:00:00Z', group: 'Group B', status: 'upcoming', hs: null, as: null },
+    { id: 'match-050', home: 'Bosnia and Herzegovina', away: 'Qatar', time: '2026-06-24T19:00:00Z', group: 'Group B', status: 'upcoming', hs: null, as: null },
+    { id: 'match-051', home: 'Scotland', away: 'Brazil', time: '2026-06-24T22:00:00Z', group: 'Group C', status: 'upcoming', hs: null, as: null },
+    { id: 'match-052', home: 'Morocco', away: 'Haiti', time: '2026-06-24T22:00:00Z', group: 'Group C', status: 'upcoming', hs: null, as: null },
+    { id: 'match-053', home: 'Czechia', away: 'Mexico', time: '2026-06-25T01:00:00Z', group: 'Group A', status: 'upcoming', hs: null, as: null },
+    { id: 'match-054', home: 'South Africa', away: 'South Korea', time: '2026-06-25T01:00:00Z', group: 'Group A', status: 'upcoming', hs: null, as: null },
+    { id: 'match-055', home: 'Ecuador', away: 'Germany', time: '2026-06-25T20:00:00Z', group: 'Group E', status: 'upcoming', hs: null, as: null },
+    { id: 'match-056', home: 'Curacao', away: 'Ivory Coast', time: '2026-06-25T20:00:00Z', group: 'Group E', status: 'upcoming', hs: null, as: null },
+    { id: 'match-057', home: 'Japan', away: 'Sweden', time: '2026-06-25T23:00:00Z', group: 'Group F', status: 'upcoming', hs: null, as: null },
+    { id: 'match-058', home: 'Tunisia', away: 'Netherlands', time: '2026-06-25T23:00:00Z', group: 'Group F', status: 'upcoming', hs: null, as: null },
+    { id: 'match-059', home: 'Turkiye', away: 'USA', time: '2026-06-26T02:00:00Z', group: 'Group D', status: 'upcoming', hs: null, as: null },
+    { id: 'match-060', home: 'Paraguay', away: 'Australia', time: '2026-06-26T02:00:00Z', group: 'Group D', status: 'upcoming', hs: null, as: null },
+    { id: 'match-061', home: 'Norway', away: 'France', time: '2026-06-26T19:00:00Z', group: 'Group I', status: 'upcoming', hs: null, as: null },
+    { id: 'match-062', home: 'Senegal', away: 'Iraq', time: '2026-06-26T19:00:00Z', group: 'Group I', status: 'upcoming', hs: null, as: null },
+    { id: 'match-063', home: 'Cape Verde', away: 'Saudi Arabia', time: '2026-06-27T00:00:00Z', group: 'Group H', status: 'upcoming', hs: null, as: null },
+    { id: 'match-064', home: 'Uruguay', away: 'Spain', time: '2026-06-27T00:00:00Z', group: 'Group H', status: 'upcoming', hs: null, as: null },
+    { id: 'match-065', home: 'Egypt', away: 'Iran', time: '2026-06-27T03:00:00Z', group: 'Group G', status: 'upcoming', hs: null, as: null },
+    { id: 'match-066', home: 'New Zealand', away: 'Belgium', time: '2026-06-27T03:00:00Z', group: 'Group G', status: 'upcoming', hs: null, as: null },
+    { id: 'match-067', home: 'Panama', away: 'England', time: '2026-06-27T21:00:00Z', group: 'Group L', status: 'upcoming', hs: null, as: null },
+    { id: 'match-068', home: 'Croatia', away: 'Ghana', time: '2026-06-27T21:00:00Z', group: 'Group L', status: 'upcoming', hs: null, as: null },
+    { id: 'match-069', home: 'Colombia', away: 'Portugal', time: '2026-06-27T23:30:00Z', group: 'Group K', status: 'upcoming', hs: null, as: null },
+    { id: 'match-070', home: 'DR Congo', away: 'Uzbekistan', time: '2026-06-27T23:30:00Z', group: 'Group K', status: 'upcoming', hs: null, as: null },
+    { id: 'match-071', home: 'Algeria', away: 'Austria', time: '2026-06-28T02:00:00Z', group: 'Group J', status: 'upcoming', hs: null, as: null },
+    { id: 'match-072', home: 'Jordan', away: 'Argentina', time: '2026-06-28T02:00:00Z', group: 'Group J', status: 'upcoming', hs: null, as: null },
   ];
 
   for (const m of matches) {

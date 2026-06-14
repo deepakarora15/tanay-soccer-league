@@ -23,6 +23,7 @@ import { startScorePoller } from './jobs/score-poller';
 import { startSchedulePoller } from './jobs/schedule-poller';
 import { startNewsPoller } from './jobs/news-poller';
 import { startEventPoller } from './jobs/event-poller';
+import { startEmailReminder } from './jobs/email-reminder';
 
 // Ensure admin user exists on startup
 bootstrapAdmin().then(() => console.log('[bootstrap] Done')).catch(e => console.error('[bootstrap] Error:', e.message));
@@ -74,6 +75,7 @@ app.listen(PORT, () => {
   const scheduleJob = startSchedulePoller();
   const newsJob = startNewsPoller();
   const eventJob = startEventPoller();
+  const emailJob = startEmailReminder();
 
   // Graceful shutdown
   const shutdown = () => {
@@ -82,6 +84,7 @@ app.listen(PORT, () => {
     scheduleJob.stop();
     newsJob.stop();
     eventJob.stop();
+    emailJob.stop();
     cache.persist();
     process.exit(0);
   };

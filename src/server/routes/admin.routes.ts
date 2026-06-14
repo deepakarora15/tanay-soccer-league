@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { dbGet, dbAll, dbRun } from '../db';
 import { requireAdmin } from '../auth';
+import { sendReminders } from '../jobs/email-reminder';
 
 const router = Router();
 
@@ -74,6 +75,18 @@ router.get('/members', requireAdmin, async (req: Request, res: Response) => {
     res.json(members);
   } catch (error: any) {
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /send-reminders — manually trigger email reminders
+ */
+router.post('/send-reminders', requireAdmin, async (req: Request, res: Response) => {
+  try {
+    await sendReminders();
+    res.json({ message: 'Reminders sent to users with unpredicted matches' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
 });
 

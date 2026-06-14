@@ -73,6 +73,8 @@ export default function Dashboard() {
         </div>
       </button>
 
+      {/* Live Scores Widget */}
+      <LiveScoresWidget />
       {/* Auto-nudge: upcoming matches without prediction */}
       <UpcomingNudge navigate={navigate} />
 
@@ -220,6 +222,40 @@ function UpcomingNudge({ navigate }: { navigate: (path: string) => void }) {
             Predict Now →
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function LiveScoresWidget() {
+  const { apiCall } = useApi();
+  const [liveMatches, setLiveMatches] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchLive = () => {
+      apiCall<any[]>('/api/matches/live').then(setLiveMatches).catch(() => {});
+    };
+    fetchLive();
+    const interval = setInterval(fetchLive, 30000); // refresh every 30s
+    return () => clearInterval(interval);
+  }, []);
+
+  if (liveMatches.length === 0) return null;
+
+  return (
+    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-live-pulse"></span>
+        <h3 className="font-bold text-red-700 dark:text-red-300">LIVE NOW</h3>
+      </div>
+      <div className="space-y-2">
+        {liveMatches.map((m: any) => (
+          <div key={m.id} className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg p-3 border border-red-100 dark:border-red-800">
+            <span className="font-semibold text-gray-900 dark:text-white text-sm">{m.homeTeam}</span>
+            <span className="font-bold text-lg text-red-600 dark:text-red-400">{m.homeScore ?? 0} - {m.awayScore ?? 0}</span>
+            <span className="font-semibold text-gray-900 dark:text-white text-sm">{m.awayTeam}</span>
+          </div>
+        ))}
       </div>
     </div>
   );

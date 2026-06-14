@@ -20,8 +20,8 @@ const client: Client = createClient({
 let dbReady: Promise<void>;
 
 async function initializeDatabase(): Promise<void> {
-  await client.executeMultiple(`
-    CREATE TABLE IF NOT EXISTS User (
+  const tables = [
+    `CREATE TABLE IF NOT EXISTS User (
       id TEXT PRIMARY KEY,
       email TEXT UNIQUE NOT NULL,
       displayName TEXT NOT NULL,
@@ -31,25 +31,22 @@ async function initializeDatabase(): Promise<void> {
       rejectionReason TEXT,
       createdAt TEXT NOT NULL,
       updatedAt TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS Tournament (
+    )`,
+    `CREATE TABLE IF NOT EXISTS Tournament (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       startDate TEXT NOT NULL,
       endDate TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'upcoming'
-    );
-
-    CREATE TABLE IF NOT EXISTS League (
+    )`,
+    `CREATE TABLE IF NOT EXISTS League (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       adminId TEXT NOT NULL,
       tournamentId TEXT,
       createdAt TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS Match (
+    )`,
+    `CREATE TABLE IF NOT EXISTS Match (
       id TEXT PRIMARY KEY,
       tournamentId TEXT NOT NULL,
       homeTeam TEXT NOT NULL,
@@ -63,9 +60,8 @@ async function initializeDatabase(): Promise<void> {
       predictionsLocked INTEGER NOT NULL DEFAULT 0,
       resultConfirmedAt TEXT,
       externalId TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS Prediction (
+    )`,
+    `CREATE TABLE IF NOT EXISTS Prediction (
       id TEXT PRIMARY KEY,
       playerId TEXT NOT NULL,
       matchId TEXT NOT NULL,
@@ -75,18 +71,16 @@ async function initializeDatabase(): Promise<void> {
       submittedAt TEXT NOT NULL,
       updatedAt TEXT NOT NULL,
       UNIQUE(playerId, matchId)
-    );
-
-    CREATE TABLE IF NOT EXISTS Favorite (
+    )`,
+    `CREATE TABLE IF NOT EXISTS Favorite (
       id TEXT PRIMARY KEY,
       playerId TEXT NOT NULL,
       type TEXT NOT NULL,
       entityName TEXT NOT NULL,
       entityId TEXT NOT NULL,
       createdAt TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS FeedEvent (
+    )`,
+    `CREATE TABLE IF NOT EXISTS FeedEvent (
       id TEXT PRIMARY KEY,
       eventType TEXT NOT NULL,
       description TEXT NOT NULL,
@@ -94,9 +88,8 @@ async function initializeDatabase(): Promise<void> {
       relatedPlayer TEXT,
       occurredAt TEXT NOT NULL,
       cachedAt TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS NewsArticle (
+    )`,
+    `CREATE TABLE IF NOT EXISTS NewsArticle (
       id TEXT PRIMARY KEY,
       headline TEXT NOT NULL,
       summary TEXT NOT NULL,
@@ -104,17 +97,20 @@ async function initializeDatabase(): Promise<void> {
       sourceAttribution TEXT NOT NULL,
       publishedAt TEXT NOT NULL,
       cachedAt TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS Notification (
+    )`,
+    `CREATE TABLE IF NOT EXISTS Notification (
       id TEXT PRIMARY KEY,
       userId TEXT NOT NULL,
       type TEXT NOT NULL,
       message TEXT NOT NULL,
       read INTEGER NOT NULL DEFAULT 0,
       createdAt TEXT NOT NULL
-    );
-  `);
+    )`,
+  ];
+
+  for (const sql of tables) {
+    await client.execute(sql);
+  }
   console.log('[db] Turso database tables initialized');
 }
 
@@ -185,7 +181,10 @@ export async function dbRun(sql: string, ...params: any[]): Promise<{ changes: n
 }
 
 export async function dbExec(sql: string): Promise<void> {
-  await client.executeMultiple(sql);
+  const statements = sql.split(';').map(s => s.trim()).filter(s => s.length > 0);
+  for (const stmt of statements) {
+    await client.execute(stmt);
+  }
 }
 
 export { dbReady, client };

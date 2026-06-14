@@ -144,13 +144,21 @@ function JoinForm() {
         body: JSON.stringify({ name, email, displayName, password }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.error?.message || data.error || 'Request failed');
       }
 
+      // Auto-login: server returns token and user
+      if (data.token && data.user) {
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('auth_user', JSON.stringify(data.user));
+        window.location.href = '/';
+        return;
+      }
+
       setSuccess('Account created! You can now sign in.');
-      setName(''); setEmail(''); setDisplayName(''); setPassword('');
     } catch (err: any) {
       setError(err.message || 'Something went wrong');
     } finally {

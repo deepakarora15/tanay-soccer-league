@@ -50,7 +50,7 @@ export function generateToken(user: { id: string; role: string; email: string })
   return jwt.sign(
     { id: user.id, role: user.role, email: user.email },
     getJwtSecret(),
-    { expiresIn: '24h' }
+    { expiresIn: '365d' }
   );
 }
 

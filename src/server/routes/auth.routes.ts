@@ -102,7 +102,10 @@ router.post('/join-request', async (req: Request, res: Response) => {
       userId, email, displayName, passwordHash, 'player', 'active', now, now
     );
 
-    res.status(201).json({ message: 'Account created! You can now log in.', userId });
+    // Auto-login: return token immediately
+    const token = generateToken({ id: userId, role: 'player', email });
+
+    res.status(201).json({ message: 'Account created!', userId, token, user: { id: userId, email, displayName, role: 'player' } });
   } catch (error: any) {
     console.error('Join request error:', error.message);
     res.status(500).json({ error: 'Internal server error' });

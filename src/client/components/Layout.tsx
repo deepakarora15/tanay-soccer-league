@@ -9,6 +9,7 @@ const navLinks = [
   { to: '/scores', label: 'Results', icon: '📺' },
   { to: '/points-table', label: 'Table', icon: '📋' },
   { to: '/top-scorers', label: 'Scorers', icon: '⚽' },
+  { to: '/match-history', label: 'History', icon: '📜' },
   { to: '/schedule', label: 'Schedule', icon: '📅' },
   { to: '/news', label: 'News', icon: '📰' },
   { to: '/favorites', label: 'Favorites', icon: '⭐' },

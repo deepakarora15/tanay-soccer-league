@@ -16,6 +16,7 @@ import Leaderboard from './components/Leaderboard';
 import AdminPanel from './components/AdminPanel';
 import PointsTable from './components/PointsTable';
 import TopScorers from './components/TopScorers';
+import MatchHistory from './components/MatchHistory';
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -58,6 +59,7 @@ function AppRoutes() {
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/points-table" element={<PointsTable />} />
         <Route path="/top-scorers" element={<TopScorers />} />
+        <Route path="/match-history" element={<MatchHistory />} />
         <Route
           path="/admin"
           element={

@@ -81,16 +81,45 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         accuracy: s.scoredPredictions > 0 ? Math.round((s.correctOutcomes / s.scoredPredictions) * 1000) / 10 : null,
         exactPredictions: s.exactPredictions || 0,
         correctOutcomes: s.correctOutcomes || 0,
+        closeness: 0, // will be calculated for tiebreaking
       };
-    }).sort((a: any, b: any) => b.totalPoints - a.totalPoints || b.exactPredictions - a.exactPredictions);
+    });
 
-    // Assign ranks — players with equal points share the same rank
+    // Calculate closeness for tiebreaking (lower = closer to actual score)
+    if (period === 'lastMatch' && (req as any).lastMatchInfo) {
+      const matchInfo = (req as any).lastMatchInfo;
+      const predictions = await dbAll(
+        "SELECT playerId, predictedHomeScore, predictedAwayScore FROM Prediction WHERE matchId = ?",
+        matchInfo.id
+      );
+      const predMap: Record<string, any> = {};
+      for (const p of predictions) {
+        predMap[p.playerId] = p;
+      }
+      entries.forEach((e: any) => {
+        const pred = predMap[e.playerId];
+        if (pred && matchInfo.homeScore !== null) {
+          // Closeness = absolute difference from actual score (lower is better)
+          e.closeness = Math.abs(pred.predictedHomeScore - matchInfo.homeScore) + Math.abs(pred.predictedAwayScore - matchInfo.awayScore);
+        } else {
+          e.closeness = 999; // no prediction = worst
+        }
+      });
+    }
+
+    // Sort: by points desc, then by closeness asc (closer = better)
+    entries.sort((a: any, b: any) => {
+      if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+      return a.closeness - b.closeness;
+    });
+
+    // Assign ranks — same points AND same closeness = shared rank
     let currentRank = 1;
     entries.forEach((e: any, i: number) => {
       if (i === 0) {
         e.rank = 1;
-      } else if (e.totalPoints === entries[i - 1].totalPoints) {
-        e.rank = entries[i - 1].rank; // same rank as previous
+      } else if (e.totalPoints === entries[i - 1].totalPoints && e.closeness === entries[i - 1].closeness) {
+        e.rank = entries[i - 1].rank;
       } else {
         e.rank = i + 1;
       }

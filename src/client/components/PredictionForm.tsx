@@ -104,7 +104,7 @@ export default function PredictionForm() {
   // Sort: upcoming unlocked matches first, then locked ones at the bottom
   const unlocked = matches.filter(m => !isLocked(m));
   const locked = matches.filter(m => isLocked(m));
-  const sortedMatches = [...unlocked, ...locked];
+  const sortedMatches = [...unlocked];
 
   return (
     <div className="space-y-6">
@@ -113,7 +113,24 @@ export default function PredictionForm() {
         Submit your predictions before kick-off! 3 pts for exact score, 1 pt for correct outcome.
       </p>
 
-      {unlocked.length === 0 && (
+      {/* Locked matches message */}
+      {locked.length > 0 && unlocked.length > 0 && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl p-4 text-center">
+          <p className="text-red-700 dark:text-red-300 font-medium">🔒 {locked.length} match{locked.length > 1 ? 'es' : ''} started — predictions locked</p>
+          <p className="text-red-500 dark:text-red-400 text-sm mt-1">Predict for the next matches below!</p>
+        </div>
+      )}
+
+      {/* All matches started */}
+      {unlocked.length === 0 && locked.length > 0 && (
+        <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-xl p-6 text-center">
+          <p className="text-4xl mb-3">⚽</p>
+          <p className="text-orange-800 dark:text-orange-200 font-bold text-lg">All current matches have started!</p>
+          <p className="text-orange-600 dark:text-orange-400 text-sm mt-2">Predictions are locked. Check back when new matches are scheduled.</p>
+        </div>
+      )}
+
+      {unlocked.length === 0 && locked.length === 0 && (
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl p-4 text-center">
           <p className="text-yellow-800 dark:text-yellow-200 font-medium">⏰ No matches open for prediction right now</p>
           <p className="text-yellow-600 dark:text-yellow-400 text-sm mt-1">Check back when the next matches are scheduled!</p>
@@ -122,7 +139,6 @@ export default function PredictionForm() {
 
       <div className="grid gap-4 md:grid-cols-2">
         {sortedMatches.map((match) => {
-          const locked = isLocked(match);
           const existing = predictions[match.id];
           const isSuccess = success === match.id;
 
@@ -132,14 +148,9 @@ export default function PredictionForm() {
               className={`relative p-5 rounded-xl border-2 transition-all ${
                 isSuccess
                   ? 'border-green-500 bg-green-50 dark:bg-green-900/20 animate-success-flash'
-                  : locked
-                  ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 opacity-75'
                   : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-green-300 dark:hover:border-green-600'
               }`}
             >
-              {locked && (
-                <div className="absolute top-3 right-3 text-gray-400">🔒</div>
-              )}
 
               <div className="text-center mb-4">
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
@@ -159,8 +170,7 @@ export default function PredictionForm() {
                   inputMode="numeric"
                   value={scores[match.id]?.home ?? ''}
                   onChange={(e) => updateScore(match.id, 'home', e.target.value)}
-                  disabled={locked}
-                  className="score-input disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="score-input"
                   placeholder="0"
                   maxLength={2}
                   aria-label={`${match.homeTeam} score`}
@@ -171,8 +181,7 @@ export default function PredictionForm() {
                   inputMode="numeric"
                   value={scores[match.id]?.away ?? ''}
                   onChange={(e) => updateScore(match.id, 'away', e.target.value)}
-                  disabled={locked}
-                  className="score-input disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="score-input"
                   placeholder="0"
                   maxLength={2}
                   aria-label={`${match.awayTeam} score`}
@@ -185,7 +194,7 @@ export default function PredictionForm() {
                 </p>
               )}
 
-              {!locked && (
+              {(
                 <button
                   onClick={() => handleSubmit(match.id)}
                   disabled={submitting === match.id}

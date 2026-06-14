@@ -61,24 +61,28 @@ export default function FavoritesManager() {
 
   const addTeam = async (name: string) => {
     try {
-      const result = await apiCall<Favorite>('/api/favorites/teams', {
+      const result = await apiCall<any>('/api/favorites/teams', {
         method: 'PUT',
         body: JSON.stringify({ entityName: name, entityId: name.toLowerCase().replace(/\s+/g, '-') }),
       });
-      setTeams(prev => [...prev, { ...result, type: 'team', entityName: name, entityId: name }]);
+      setTeams(prev => [...prev, { id: result.id, entityName: name, entityId: name.toLowerCase().replace(/\s+/g, '-'), type: 'team', playerId: '' }]);
       setTeamSearch('');
-    } catch {}
+    } catch (e: any) {
+      console.error('Add team failed:', e.message);
+    }
   };
 
   const addPlayer = async (name: string) => {
     try {
-      const result = await apiCall<Favorite>('/api/favorites/players', {
+      const result = await apiCall<any>('/api/favorites/players', {
         method: 'PUT',
         body: JSON.stringify({ entityName: name, entityId: name.toLowerCase().replace(/\s+/g, '-') }),
       });
-      setPlayers(prev => [...prev, { ...result, type: 'player', entityName: name, entityId: name }]);
+      setPlayers(prev => [...prev, { id: result.id, entityName: name, entityId: name.toLowerCase().replace(/\s+/g, '-'), type: 'player', playerId: '' }]);
       setPlayerSearch('');
-    } catch {}
+    } catch (e: any) {
+      console.error('Add player failed:', e.message);
+    }
   };
 
   const removeFavorite = async (id: string, type: 'team' | 'player') => {

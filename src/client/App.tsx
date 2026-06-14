@@ -14,6 +14,7 @@ import PersonalizedFeed from './components/PersonalizedFeed';
 import FavoritesManager from './components/FavoritesManager';
 import Leaderboard from './components/Leaderboard';
 import AdminPanel from './components/AdminPanel';
+import PointsTable from './components/PointsTable';
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -54,6 +55,7 @@ function AppRoutes() {
         <Route path="/feed" element={<PersonalizedFeed />} />
         <Route path="/favorites" element={<FavoritesManager />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
+        <Route path="/points-table" element={<PointsTable />} />
         <Route
           path="/admin"
           element={

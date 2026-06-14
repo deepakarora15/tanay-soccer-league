@@ -7,9 +7,10 @@ const navLinks = [
   { to: '/', label: 'Dashboard', icon: '📊' },
   { to: '/predictions', label: 'Predict', icon: '🎯' },
   { to: '/scores', label: 'Results', icon: '📺' },
+  { to: '/points-table', label: 'Table', icon: '📋' },
   { to: '/schedule', label: 'Schedule', icon: '📅' },
   { to: '/news', label: 'News', icon: '📰' },
-  { to: '/feed', label: 'Feed', icon: '⭐' },
+  { to: '/favorites', label: 'Favorites', icon: '⭐' },
   { to: '/leaderboard', label: 'Leaderboard', icon: '🏆' },
 ];
 
@@ -197,8 +198,8 @@ export default function Layout() {
             { to: '/', icon: '📊', label: 'Home' },
             { to: '/predictions', icon: '🎯', label: 'Predict' },
             { to: '/scores', icon: '📺', label: 'Results' },
+            { to: '/points-table', icon: '📋', label: 'Table' },
             { to: '/leaderboard', icon: '🏆', label: 'Ranks' },
-            { to: '/schedule', icon: '📅', label: 'Schedule' },
           ].map((tab) => (
             <NavLink
               key={tab.to}

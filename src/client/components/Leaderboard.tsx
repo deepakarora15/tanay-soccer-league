@@ -31,7 +31,7 @@ export default function Leaderboard() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [lastMatch, setLastMatch] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<Period>('overall');
+  const [period, setPeriod] = useState<Period>('lastMatch');
 
   useEffect(() => {
     setLoading(true);

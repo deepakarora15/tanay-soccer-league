@@ -29,29 +29,43 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       }
     }
 
-    const players = await dbAll(
-      `SELECT u.id as playerId, u.displayName,
+    // Get all active users first
+    const allUsers = await dbAll("SELECT id as playerId, displayName FROM User WHERE status = 'active'");
+
+    // Get scores for the selected period
+    const scoredPlayers = await dbAll(
+      `SELECT p.playerId,
               COALESCE(SUM(p.pointsAwarded), 0) as totalPoints,
               COUNT(CASE WHEN p.pointsAwarded = 3 THEN 1 END) as exactPredictions,
               COUNT(CASE WHEN p.pointsAwarded >= 1 THEN 1 END) as correctOutcomes,
-              COUNT(CASE WHEN p.pointsAwarded IS NOT NULL THEN 1 END) as scoredPredictions
-       FROM User u
-       INNER JOIN Prediction p ON u.id = p.playerId
+              COUNT(p.id) as scoredPredictions
+       FROM Prediction p
        INNER JOIN Match m ON p.matchId = m.id
-       WHERE u.status = 'active'${dateFilter}
-       GROUP BY u.id, u.displayName
-       ORDER BY totalPoints DESC, exactPredictions DESC, correctOutcomes DESC`
+       WHERE 1=1${dateFilter}
+       GROUP BY p.playerId`
     );
 
-    const entries = players.map((p: any, i: number) => ({
-      rank: i + 1,
-      playerId: p.playerId,
-      displayName: p.displayName,
-      totalPoints: p.totalPoints || 0,
-      accuracy: p.scoredPredictions > 0 ? Math.round((p.correctOutcomes / p.scoredPredictions) * 1000) / 10 : null,
-      exactPredictions: p.exactPredictions || 0,
-      correctOutcomes: p.correctOutcomes || 0,
-    }));
+    const scoreMap: Record<string, any> = {};
+    for (const s of scoredPlayers) {
+      scoreMap[s.playerId] = s;
+    }
+
+    // Merge: all users + their scores for the period
+    const entries = allUsers.map((u: any, i: number) => {
+      const s = scoreMap[u.playerId] || { totalPoints: 0, exactPredictions: 0, correctOutcomes: 0, scoredPredictions: 0 };
+      return {
+        rank: 0,
+        playerId: u.playerId,
+        displayName: u.displayName,
+        totalPoints: s.totalPoints || 0,
+        accuracy: s.scoredPredictions > 0 ? Math.round((s.correctOutcomes / s.scoredPredictions) * 1000) / 10 : null,
+        exactPredictions: s.exactPredictions || 0,
+        correctOutcomes: s.correctOutcomes || 0,
+      };
+    }).sort((a: any, b: any) => b.totalPoints - a.totalPoints || b.exactPredictions - a.exactPredictions);
+
+    // Assign ranks
+    entries.forEach((e: any, i: number) => { e.rank = i + 1; });
 
     // If current player not in list, add them
     const currentPlayer = entries.find((e: any) => e.playerId === playerId) || {

@@ -173,16 +173,16 @@ async function seedNews(): Promise<void> {
 }
 
 async function updateResults(): Promise<void> {
-  // Actual results from the World Cup (sourced from ESPN, BBC, etc.)
+  // Actual results from the World Cup
   const results = [
-    { id: 'match-001', hs: 2, as: 0 },  // Mexico 2-0 South Africa
-    { id: 'match-002', hs: 2, as: 1 },  // South Korea 2-1 Czechia
-    { id: 'match-003', hs: 1, as: 1 },  // Canada 1-1 Bosnia
-    { id: 'match-004', hs: 4, as: 1 },  // USA 4-1 Paraguay
-    { id: 'match-005', hs: 1, as: 1 },  // Qatar 1-1 Switzerland
-    { id: 'match-006', hs: 1, as: 1 },  // Brazil 1-1 Morocco
-    { id: 'match-007', hs: 0, as: 1 },  // Haiti 0-1 Scotland
-    { id: 'match-008', hs: 2, as: 0 },  // Australia 2-0 Turkiye
+    { id: 'match-001', hs: 2, as: 0 },
+    { id: 'match-002', hs: 2, as: 1 },
+    { id: 'match-003', hs: 1, as: 1 },
+    { id: 'match-004', hs: 4, as: 1 },
+    { id: 'match-005', hs: 1, as: 1 },
+    { id: 'match-006', hs: 1, as: 1 },
+    { id: 'match-007', hs: 0, as: 1 },
+    { id: 'match-008', hs: 2, as: 0 },
   ];
 
   for (const r of results) {
@@ -191,4 +191,26 @@ async function updateResults(): Promise<void> {
       r.hs, r.as, new Date().toISOString(), r.id
     );
   }
+
+  // Score all predictions for completed matches that haven't been scored yet
+  const unscored = await dbAll(
+    `SELECT p.id, p.matchId, p.predictedHomeScore, p.predictedAwayScore, m.homeScore, m.awayScore
+     FROM Prediction p
+     JOIN Match m ON p.matchId = m.id
+     WHERE m.status = 'completed' AND p.pointsAwarded IS NULL AND m.homeScore IS NOT NULL`
+  );
+
+  for (const pred of unscored) {
+    let points = 0;
+    if (pred.predictedHomeScore === pred.homeScore && pred.predictedAwayScore === pred.awayScore) {
+      points = 3;
+    } else {
+      const pOutcome = Math.sign(pred.predictedHomeScore - pred.predictedAwayScore);
+      const aOutcome = Math.sign(pred.homeScore - pred.awayScore);
+      if (pOutcome === aOutcome) points = 1;
+    }
+    await dbRun("UPDATE Prediction SET pointsAwarded = ? WHERE id = ?", points, pred.id);
+  }
+
+  if (unscored.length > 0) console.log(`[bootstrap] Scored ${unscored.length} pending predictions`);
 }

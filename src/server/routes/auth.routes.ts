@@ -112,4 +112,42 @@ router.post('/join-request', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * POST /reset-password
+ * Resets password using email + display name as verification.
+ */
+router.post('/reset-password', async (req: Request, res: Response) => {
+  try {
+    const { email, displayName, newPassword } = req.body;
+
+    if (!email || !displayName || !newPassword) {
+      res.status(400).json({ error: 'Email, display name, and new password are required' });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      res.status(400).json({ error: 'Password must be at least 6 characters' });
+      return;
+    }
+
+    const user = await dbGet(
+      'SELECT id FROM User WHERE email = ? AND displayName = ?',
+      email, displayName
+    );
+
+    if (!user) {
+      res.status(404).json({ error: 'No account found with that email and display name combination' });
+      return;
+    }
+
+    const passwordHash = await hashPassword(newPassword);
+    await dbRun('UPDATE User SET passwordHash = ?, updatedAt = ? WHERE id = ?', passwordHash, new Date().toISOString(), user.id);
+
+    res.json({ message: 'Password reset successful! You can now sign in.' });
+  } catch (error: any) {
+    console.error('Reset password error:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

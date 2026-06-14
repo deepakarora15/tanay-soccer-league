@@ -1,7 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-type Tab = 'login' | 'join';
+type Tab = 'login' | 'join' | 'reset';
 
 export default function AuthPages() {
   const [activeTab, setActiveTab] = useState<Tab>('login');
@@ -39,14 +39,16 @@ export default function AuthPages() {
         </div>
 
         <div className="p-6">
-          {activeTab === 'login' ? <LoginForm /> : <JoinForm />}
+          {activeTab === 'login' && <LoginForm onForgot={() => setActiveTab('reset')} />}
+          {activeTab === 'join' && <JoinForm />}
+          {activeTab === 'reset' && <ResetForm onBack={() => setActiveTab('login')} />}
         </div>
       </div>
     </div>
   );
 }
 
-function LoginForm() {
+function LoginForm({ onForgot }: { onForgot: () => void }) {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -112,6 +114,9 @@ function LoginForm() {
         className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? 'Signing in...' : 'Sign In'}
+      </button>
+      <button type="button" onClick={onForgot} className="w-full mt-3 text-sm text-blue-600 dark:text-blue-400 hover:underline">
+        Forgot Password?
       </button>
     </form>
   );
@@ -224,6 +229,68 @@ function JoinForm() {
         className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? 'Submitting...' : 'Request to Join'}
+      </button>
+    </form>
+  );
+}
+
+function ResetForm({ onBack }: { onBack: () => void }) {
+  const [email, setEmail] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(''); setSuccess('');
+
+    if (!email.trim() || !displayName.trim() || !newPassword) {
+      setError('All fields are required');
+      return;
+    }
+    if (newPassword.length < 6) { setError('Password must be at least 6 characters'); return; }
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, displayName, newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Reset failed');
+      setSuccess(data.message || 'Password reset! You can now sign in.');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Enter your email and display name to verify your identity, then set a new password.</p>
+      {error && <div className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-4 py-2 rounded-lg text-sm">{error}</div>}
+      {success && <div className="bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-4 py-2 rounded-lg text-sm">{success}</div>}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" placeholder="you@example.com" />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Display Name</label>
+        <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" placeholder="Your display name" />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password</label>
+        <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" placeholder="Min 6 characters" />
+      </div>
+      <button type="submit" disabled={loading} className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50">
+        {loading ? 'Resetting...' : 'Reset Password'}
+      </button>
+      <button type="button" onClick={onBack} className="w-full text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400">
+        ← Back to Sign In
       </button>
     </form>
   );

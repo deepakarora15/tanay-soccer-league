@@ -75,6 +75,10 @@ export default function Dashboard() {
 
       {/* Live Scores Widget */}
       <LiveScoresWidget />
+
+      {/* Today's Matches */}
+      <TodaysMatches />
+
       {/* Auto-nudge: upcoming matches without prediction */}
       <UpcomingNudge navigate={navigate} />
 
@@ -257,6 +261,64 @@ function LiveScoresWidget() {
               {m.matchMinute && <p className="text-xs text-red-500 animate-live-pulse">{m.matchMinute}'</p>}
             </div>
             <span className="font-semibold text-gray-900 dark:text-white text-sm">{m.awayTeam}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TodaysMatches() {
+  const { apiCall } = useApi();
+  const [matches, setMatches] = useState<any[]>([]);
+
+  useEffect(() => {
+    Promise.all([
+      apiCall<any[]>('/api/matches/live').catch(() => []),
+      apiCall<any[]>('/api/matches/completed').catch(() => []),
+      apiCall<any[]>('/api/matches/upcoming').catch(() => []),
+    ]).then(([live, completed, upcoming]) => {
+      // Get today's date
+      const today = new Date().toISOString().split('T')[0];
+
+      // Filter to today's matches
+      const todayLive = live.filter((m: any) => m.scheduledAt.startsWith(today));
+      const todayCompleted = completed.filter((m: any) => m.scheduledAt.startsWith(today));
+      const todayUpcoming = upcoming.filter((m: any) => m.scheduledAt.startsWith(today));
+
+      // Order: live first, then completed, then upcoming
+      setMatches([...todayLive, ...todayCompleted, ...todayUpcoming]);
+    });
+  }, []);
+
+  if (matches.length === 0) return null;
+
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Today's Matches</h3>
+      <div className="space-y-2">
+        {matches.map((m: any) => (
+          <div key={m.id} className={`flex items-center justify-between p-3 rounded-lg border ${
+            m.status === 'live' ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800' :
+            m.status === 'completed' ? 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700' :
+            'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+          }`}>
+            <span className="font-medium text-gray-900 dark:text-white text-sm flex-1">{m.homeTeam}</span>
+            <div className="text-center px-3">
+              {m.status === 'live' && (
+                <span className="text-xs text-red-500 block animate-live-pulse">LIVE{m.matchMinute ? ` ${m.matchMinute}'` : ''}</span>
+              )}
+              {m.status === 'completed' && <span className="text-xs text-gray-400 block">FT</span>}
+              {m.status === 'upcoming' && (
+                <span className="text-xs text-blue-500 block">
+                  {new Date(m.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
+              <span className={`font-bold ${m.status === 'live' ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
+                {m.homeScore ?? '-'} - {m.awayScore ?? '-'}
+              </span>
+            </div>
+            <span className="font-medium text-gray-900 dark:text-white text-sm flex-1 text-right">{m.awayTeam}</span>
           </div>
         ))}
       </div>

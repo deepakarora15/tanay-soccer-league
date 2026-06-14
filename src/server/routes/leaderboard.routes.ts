@@ -7,8 +7,28 @@ const router = Router();
 router.get('/', requireAuth, async (req: Request, res: Response) => {
   try {
     const playerId = req.user!.id;
+    const period = (req.query.period as string) || 'overall';
 
-    // Get all players with their prediction stats
+    let dateFilter = '';
+    const now = new Date();
+
+    if (period === 'today') {
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+      dateFilter = ` AND m.resultConfirmedAt >= '${todayStart}'`;
+    } else if (period === 'week') {
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      dateFilter = ` AND m.resultConfirmedAt >= '${weekAgo}'`;
+    } else if (period === 'lastMatch') {
+      // Get the most recently completed match
+      const lastMatch = await dbAll("SELECT id FROM Match WHERE status = 'completed' ORDER BY resultConfirmedAt DESC LIMIT 1");
+      if (lastMatch.length > 0) {
+        dateFilter = ` AND p.matchId = '${lastMatch[0].id}'`;
+      } else {
+        res.json({ entries: [], currentPlayer: { rank: 1, playerId, displayName: 'You', totalPoints: 0, accuracy: null, exactPredictions: 0, correctOutcomes: 0 } });
+        return;
+      }
+    }
+
     const players = await dbAll(
       `SELECT u.id as playerId, u.displayName,
               COALESCE(SUM(p.pointsAwarded), 0) as totalPoints,
@@ -16,9 +36,11 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
               COUNT(CASE WHEN p.pointsAwarded >= 1 THEN 1 END) as correctOutcomes,
               COUNT(CASE WHEN p.pointsAwarded IS NOT NULL THEN 1 END) as scoredPredictions
        FROM User u
-       LEFT JOIN Prediction p ON u.id = p.playerId
-       WHERE u.status = 'active'
+       INNER JOIN Prediction p ON u.id = p.playerId
+       INNER JOIN Match m ON p.matchId = m.id
+       WHERE u.status = 'active' AND p.pointsAwarded IS NOT NULL${dateFilter}
        GROUP BY u.id, u.displayName
+       HAVING totalPoints > 0 OR COUNT(p.id) > 0
        ORDER BY totalPoints DESC, exactPredictions DESC, correctOutcomes DESC`
     );
 
@@ -32,10 +54,16 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       correctOutcomes: p.correctOutcomes || 0,
     }));
 
+    // If current player not in list, add them
     const currentPlayer = entries.find((e: any) => e.playerId === playerId) || {
       rank: entries.length + 1, playerId, displayName: 'You', totalPoints: 0,
       accuracy: null, exactPredictions: 0, correctOutcomes: 0,
     };
+
+    // Ensure current player is in entries
+    if (!entries.find((e: any) => e.playerId === playerId)) {
+      entries.push(currentPlayer);
+    }
 
     res.json({ entries, currentPlayer });
   } catch (error: any) {

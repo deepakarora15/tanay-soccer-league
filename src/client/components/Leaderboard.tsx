@@ -7,9 +7,9 @@ interface LeaderboardEntry {
   displayName: string;
   totalPoints: number;
   accuracy: number | null;
-  rank: number;
   exactPredictions: number;
   correctOutcomes: number;
+  rank: number;
 }
 
 interface LeaderboardResponse {
@@ -17,26 +17,22 @@ interface LeaderboardResponse {
   currentPlayer: LeaderboardEntry;
 }
 
+type Period = 'overall' | 'week' | 'today' | 'lastMatch';
+
 export default function Leaderboard() {
   const { apiCall } = useApi();
   const { user } = useAuth();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState<Period>('overall');
 
   useEffect(() => {
-    apiCall<LeaderboardResponse>('/api/leaderboard')
+    setLoading(true);
+    apiCall<LeaderboardResponse>(`/api/leaderboard?period=${period}`)
       .then((data) => setEntries(data.entries || []))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
-      </div>
-    );
-  }
+  }, [period]);
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return '🏆';
@@ -46,23 +42,54 @@ export default function Leaderboard() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <h2 className="text-2xl font-bold text-gray-900 dark:text-white">🏆 Leaderboard</h2>
 
-      {entries.length === 0 ? (
+      {/* Period Filter */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {([
+          { key: 'overall', label: 'Overall' },
+          { key: 'week', label: 'This Week' },
+          { key: 'today', label: 'Today' },
+          { key: 'lastMatch', label: 'Last Match' },
+        ] as { key: Period; label: string }[]).map((p) => (
+          <button
+            key={p.key}
+            onClick={() => setPeriod(p.key)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+              period === p.key
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent"></div>
+        </div>
+      ) : entries.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-4xl mb-2">🏆</p>
-          <p className="text-gray-500 dark:text-gray-400">No rankings yet. Start predicting!</p>
+          <p className="text-gray-500 dark:text-gray-400">
+            {period === 'today' ? 'No predictions scored today yet.' :
+             period === 'lastMatch' ? 'No match results available yet.' :
+             period === 'week' ? 'No predictions scored this week.' :
+             'No rankings yet. Start predicting!'}
+          </p>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
           <table className="w-full text-sm">
             <thead className="bg-gradient-to-r from-blue-500 to-green-500 text-white">
               <tr>
-                <th className="text-left px-4 py-3 font-semibold">#</th>
-                <th className="text-left px-4 py-3 font-semibold">Player</th>
-                <th className="text-center px-4 py-3 font-semibold">Points</th>
-                <th className="text-center px-4 py-3 font-semibold hidden sm:table-cell">Accuracy</th>
+                <th className="text-left px-3 py-3 font-semibold w-[40px]">#</th>
+                <th className="text-left px-3 py-3 font-semibold">Player</th>
+                <th className="text-center px-3 py-3 font-semibold">Points</th>
+                <th className="text-center px-3 py-3 font-semibold hidden sm:table-cell">Exact</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -71,31 +98,21 @@ export default function Leaderboard() {
                 return (
                   <tr
                     key={entry.playerId}
-                    className={`${
-                      isCurrentUser
-                        ? 'bg-green-50 dark:bg-green-900/20 font-semibold'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                    }`}
+                    className={isCurrentUser ? 'bg-green-50 dark:bg-green-900/20 font-semibold' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}
                   >
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-3">
                       <span className={entry.rank <= 3 ? 'text-xl' : 'text-gray-600 dark:text-gray-400'}>
                         {getRankIcon(entry.rank)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
+                    <td className="px-3 py-3 text-gray-900 dark:text-gray-100">
                       {entry.displayName}
                       {isCurrentUser && (
-                        <span className="ml-2 text-xs bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200 px-2 py-0.5 rounded-full">
-                          You
-                        </span>
+                        <span className="ml-2 text-xs bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200 px-2 py-0.5 rounded-full">You</span>
                       )}
                     </td>
-                    <td className="text-center px-4 py-3 font-bold text-blue-600 dark:text-blue-400">
-                      {entry.totalPoints}
-                    </td>
-                    <td className="text-center px-4 py-3 text-gray-600 dark:text-gray-400 hidden sm:table-cell">
-                      {entry.accuracy !== null ? `${entry.accuracy}%` : '—'}
-                    </td>
+                    <td className="text-center px-3 py-3 font-bold text-blue-600 dark:text-blue-400">{entry.totalPoints}</td>
+                    <td className="text-center px-3 py-3 text-gray-600 dark:text-gray-400 hidden sm:table-cell">{entry.exactPredictions}🎯</td>
                   </tr>
                 );
               })}

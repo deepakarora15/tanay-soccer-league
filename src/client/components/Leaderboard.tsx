@@ -40,7 +40,19 @@ export default function Leaderboard() {
     setLoading(true);
     setExpandedMatch(null);
     apiCall<any>(`/api/leaderboard?period=${period}`)
-      .then((data) => { setEntries(data.entries || []); setLastMatch(data.lastMatch || null); setPeriodMatches(data.matches || []); })
+      .then((data) => {
+        setEntries(data.entries || []);
+        setLastMatch(data.lastMatch || null);
+        setPeriodMatches(data.matches || []);
+        // Auto-select most recent completed/live match for today/week
+        if ((period === 'today' || period === 'week') && data.matches?.length > 0) {
+          const sorted = [...data.matches].sort((a: any, b: any) => b.scheduledAt.localeCompare(a.scheduledAt));
+          const latest = sorted.find((m: any) => m.status === 'completed' || m.status === 'live');
+          if (latest) {
+            viewMatchPredictions(latest.id);
+          }
+        }
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [period]);
@@ -104,11 +116,13 @@ export default function Leaderboard() {
         </div>
       ) : (
         <>
-        {/* Match slicer for Today/Week — positioned above the scoreboard */}
+        {/* Match slicer for Today/Week — sorted most recent first, auto-select latest */}
         {(period === 'today' || period === 'week') && periodMatches.length > 0 && (
           <div className="overflow-x-auto pb-1">
-            <div className="flex gap-2">
-              {periodMatches.map((m: any) => {
+            <div className="flex gap-2" style={{ direction: 'rtl' }}>
+              {[...periodMatches]
+                .sort((a: any, b: any) => b.scheduledAt.localeCompare(a.scheduledAt))
+                .map((m: any) => {
                 const isPlayable = m.status === 'completed' || m.status === 'live';
                 const isSelected = expandedMatch === m.id;
                 return (
@@ -116,6 +130,7 @@ export default function Leaderboard() {
                     key={m.id}
                     onClick={() => isPlayable ? viewMatchPredictions(m.id) : null}
                     disabled={!isPlayable}
+                    style={{ direction: 'ltr' }}
                     className={`flex-shrink-0 px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
                       !isPlayable
                         ? 'border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-default'

@@ -136,29 +136,65 @@ export default function Leaderboard() {
           </div>
         )}
 
-        {/* Expanded match predictions */}
+        {/* Expanded match predictions — full ranked view like Last Match */}
         {expandedMatch && (period === 'today' || period === 'week') && (
-          <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-            {matchPredictions.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center">No predictions for this match</p>
-            ) : (
-              <div className="space-y-1">
-                {matchPredictions.map((p: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between text-sm py-1">
-                    <span className="text-gray-800 dark:text-gray-200">{p.displayName}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-gray-900 dark:text-white">{p.predictedHomeScore} - {p.predictedAwayScore}</span>
-                      {p.pointsAwarded !== null && (
-                        <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
-                          p.pointsAwarded === 3 ? 'bg-green-100 dark:bg-green-900/40 text-green-700' :
-                          p.pointsAwarded === 1 ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700' :
-                          'bg-gray-100 dark:bg-gray-700 text-gray-500'
-                        }`}>+{p.pointsAwarded}</span>
-                      )}
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+            {/* Score banner */}
+            {(() => {
+              const m = periodMatches.find((x: any) => x.id === expandedMatch);
+              if (!m) return null;
+              return (
+                <div className={`${m.status === 'live' ? 'bg-red-600' : 'bg-green-600'} text-white px-4 py-3 text-center`}>
+                  {m.status === 'live' && (
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <span className="w-2 h-2 rounded-full bg-white animate-live-pulse"></span>
+                      <span className="text-xs font-medium">LIVE</span>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  )}
+                  {m.status === 'completed' && <p className="text-xs opacity-80">Final Score</p>}
+                  <p className="text-lg font-bold">{m.homeTeam} {m.homeScore ?? 0} - {m.awayScore ?? 0} {m.awayTeam}</p>
+                </div>
+              );
+            })()}
+            {/* Ranked predictions table */}
+            {matchPredictions.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-4">No predictions for this match</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th className="text-left px-3 py-2 font-semibold text-gray-600 dark:text-gray-300 w-[40px]">#</th>
+                    <th className="text-left px-3 py-2 font-semibold text-gray-600 dark:text-gray-300">Player</th>
+                    <th className="text-center px-3 py-2 font-semibold text-gray-600 dark:text-gray-300">Predicted</th>
+                    <th className="text-center px-3 py-2 font-semibold text-gray-600 dark:text-gray-300">Pts</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                  {matchPredictions
+                    .sort((a: any, b: any) => (b.pointsAwarded ?? -1) - (a.pointsAwarded ?? -1))
+                    .map((p: any, i: number) => (
+                    <tr key={i} className={p.playerId === user?.id ? 'bg-green-50 dark:bg-green-900/20' : ''}>
+                      <td className="px-3 py-2 text-gray-600 dark:text-gray-400">
+                        {p.pointsAwarded === 3 ? '🏆' : p.pointsAwarded === 1 ? '🥈' : i + 1}
+                      </td>
+                      <td className="px-3 py-2 text-gray-900 dark:text-white font-medium">
+                        {p.displayName}
+                        {p.playerId === user?.id && <span className="ml-1 text-xs bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200 px-1.5 py-0.5 rounded-full">You</span>}
+                      </td>
+                      <td className="text-center px-3 py-2 font-mono font-bold text-gray-900 dark:text-white">{p.predictedHomeScore} - {p.predictedAwayScore}</td>
+                      <td className="text-center px-3 py-2">
+                        {p.pointsAwarded !== null ? (
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                            p.pointsAwarded === 3 ? 'bg-green-100 dark:bg-green-900/40 text-green-700' :
+                            p.pointsAwarded === 1 ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700' :
+                            'bg-gray-100 dark:bg-gray-700 text-gray-500'
+                          }`}>+{p.pointsAwarded}</span>
+                        ) : <span className="text-xs text-gray-400">—</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </div>
         )}

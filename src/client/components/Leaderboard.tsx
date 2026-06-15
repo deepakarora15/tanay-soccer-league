@@ -118,8 +118,8 @@ export default function Leaderboard() {
         <>
         {/* Match slicer for Today/Week — sorted most recent first, auto-select latest */}
         {(period === 'today' || period === 'week') && periodMatches.length > 0 && (
-          <div className="overflow-x-auto pb-1">
-            <div className="flex gap-2" style={{ direction: 'rtl' }}>
+          <div className="overflow-x-auto pb-2 -mx-1 px-1">
+            <div className="flex gap-2 min-w-max">
               {[...periodMatches]
                 .sort((a: any, b: any) => b.scheduledAt.localeCompare(a.scheduledAt))
                 .map((m: any) => {
@@ -130,7 +130,6 @@ export default function Leaderboard() {
                     key={m.id}
                     onClick={() => isPlayable ? viewMatchPredictions(m.id) : null}
                     disabled={!isPlayable}
-                    style={{ direction: 'ltr' }}
                     className={`flex-shrink-0 px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
                       !isPlayable
                         ? 'border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-default'
